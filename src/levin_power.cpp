@@ -5,7 +5,7 @@ levin_power::levin_power(uint type_in, std::vector<double> x, std::vector<std::v
 {
     if (integrand.size() != x.size())
     {
-        throw std::range_error("kernel dimension does not match size of chi_cl");
+        throw std::range_error("support dimensions must match integrand dimensions");
     }
     type = type_in;
     if (type < 2)
@@ -79,7 +79,7 @@ void levin_power::init_splines(std::vector<double> x, std::vector<std::vector<do
     {
         if (!system_of_equations_set && !bisection_set)
         {
-            spline_integrand.push_back(gsl_spline_alloc(gsl_interp_cspline, x.size()));
+            spline_integrand.push_back(gsl_spline_alloc(gsl_interp_linear, x.size()));
             acc_integrand.push_back(gsl_interp_accel_alloc());
             is_y_log.push_back(false);
             if (!bisection_set)
@@ -102,7 +102,7 @@ void levin_power::init_splines(std::vector<double> x, std::vector<std::vector<do
             is_y_log.at(i_integrand) = true;
             for (uint i = 0; i < x.size(); i++)
             {
-                if (integrand.at(i).at(i_integrand) < 0)
+                if (integrand.at(i).at(i_integrand) <= 0)
                 {
                     is_y_log.at(i_integrand) = false;
                 }
@@ -1401,7 +1401,7 @@ double levin_power::iterate_single(double A, double B, uint col, uint i_integran
         std::cerr << "maximum number of bisections reached for integrand " << i_integrand << " at k " << k << " and ell " << ell << std::endl;
     }
     error_count = true;
-    if (error_count == true)
+    if (error_count == true && verbose == true)
     {
         std::cerr << "Convergence cannot be reached for the current settings for integrand " << i_integrand << " try to decrease the relative accuracy or increase the possible number of bisections or the number of collocation points." << std::endl;
     }
@@ -1487,7 +1487,7 @@ double levin_power::iterate_double(double A, double B, uint col, uint i_integran
         std::cerr << "maximum number of bisections reached for integrand " << i_integrand << " at k_1 " << k_1 << " at k_2 " << k_2 << " and ell_1 " << ell_1 << " and ell_2 " << ell_2 << std::endl;
     }
     error_count = true;
-    if (error_count == true)
+    if (error_count == true && verbose == true)
     {
         std::cerr << "Convergence cannot be reached for the current settings for integrand " << i_integrand << " try to decrease the relative accuracy or increase the possible number of bisections or the number of collocation points." << std::endl;
     }
@@ -1573,7 +1573,7 @@ double levin_power::iterate_triple(double A, double B, uint col, uint i_integran
         std::cerr << "maximum number of bisections reached for integrand " << i_integrand << " at k_1 " << k_1 << " at k_2 " << k_2 << " and ell_1 " << ell_1 << " and ell_2 " << ell_2 << std::endl;
     }
     error_count = true;
-    if (error_count == true)
+    if (error_count == true && verbose == true)
     {
         std::cerr << "Convergence cannot be reached for the current settings for integrand " << i_integrand << " try to decrease the relative accuracy or increase the possible number of bisections or the number of collocation points." << std::endl;
     }
@@ -1604,6 +1604,10 @@ double levin_power::levin_integrate_triple_bessel(double x_min, double x_max, do
 
 std::vector<std::vector<double>> levin_power::levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, bool diagonal)
 {
+    if(d>2)
+    {
+        throw std::range_error("You have chosen the wrong integral type to call this function, must be either 0 or 1");
+    }
     if(diagonal)
     {
         if(x_min.size() != n_integrand)
@@ -1810,6 +1814,10 @@ std::vector<std::vector<double>> levin_power::levin_integrate_bessel_single(std:
 
 std::vector<std::vector<double>> levin_power::levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, bool diagonal)
 {
+    if(d == 8 || d == 2)
+    {
+        throw std::range_error("You have chosen the wrong integral type to call this function, must be either 2 or 3");
+    }
     if(diagonal)
     {
         if(x_min.size() != n_integrand)
@@ -2013,9 +2021,12 @@ std::vector<std::vector<double>> levin_power::levin_integrate_bessel_double(std:
     }
 }
 
-
 std::vector<std::vector<double>> levin_power::levin_integrate_bessel_triple(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<double> k_3, std::vector<uint> ell_1, std::vector<uint> ell_2, std::vector<uint> ell_3, bool diagonal)
 {
+    if(d != 8)
+    {
+        throw std::range_error("You have chosen the wrong integral type to call this function, must be either 4 or 5");
+    }
     if(diagonal)
     {
         if(x_min.size() != n_integrand)
