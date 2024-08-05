@@ -79,6 +79,9 @@
         "__hash_table": "cpp",
         "queue": "cpp",
         "span": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "__node_handle": "cpp",
+        "__verbose_abort": "cpp",
+        "execution": "cpp"
     }
 }

@@ -24,8 +24,8 @@
 class levin_power
 {
 private:
-    std::vector<gsl_interp_accel *> acc_integrand;
-    std::vector<gsl_spline *> spline_integrand;
+    std::vector<std::vector<gsl_interp_accel *>> acc_integrand;
+    std::vector<std::vector<gsl_spline *>> spline_integrand;
     std::vector<bool> is_y_log;
     std::vector<uint> index_variable, index_integral, index_bisection;
     std::vector<std::vector<std::vector<double>>> bisection;
@@ -87,13 +87,23 @@ public:
 
   std::vector<double> setNodes(double A, double B, uint col);
 
+  std::vector<double> setNodes_cheby(uint col);
+
+  double map_y_to_x(double y, double A, double B);
+
   double basis_function(double A, double B, double x, uint m);
 
   double basis_function_prime(double A, double B, double x, uint m);
 
-  double inhomogeneity(double x, uint i_integrand);
+  double basis_function_cheby(double x, uint m);
+
+  double basis_function_prime_cheby(double x, uint m);
+
+  double inhomogeneity(double x, uint i_integrand, uint tid);
 
   std::vector<double> solve_LSE_single(double A, double B, uint col, std::vector<double> x_j, uint i_integrand, double k, uint ell);
+
+  std::vector<double> solve_LSE_single_cheby(double A, double B, uint col, std::vector<double> x_j, uint i_integrand, double k, uint ell);
 
   std::vector<double> solve_LSE_double(double A, double B, uint col, std::vector<double> x_j, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2);
 
@@ -101,9 +111,13 @@ public:
 
   double p(double A, double B, uint i, double x, uint col, std::vector<double> c);
 
+  double p_cheby(double A, double B, uint i, double x, uint col, std::vector<double> c);
+
   std::vector<double> p_precompute(double A, double B, uint i, double x, uint col, std::vector<double> c);
 
   double integrate_single(double A,  double B, uint col, uint i_integrand, double k, uint ell);
+
+  double integrate_single_cheby(double A,  double B, uint col, uint i_integrand, double k, uint ell);
 
   double integrate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2);
 
@@ -114,6 +128,8 @@ public:
   double integrate_lse_set_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2);
 
   double integrate_lse_set_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3);
+
+  double iterate_single_cheby(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose);
 
   double iterate_single(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose);
 

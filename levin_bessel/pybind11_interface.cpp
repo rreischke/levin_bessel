@@ -32,6 +32,12 @@ PYBIND11_MODULE(levinpower, m)
          .def("levin_integrate_single_bessel", &levin_power::levin_integrate_single_bessel,
               "x_min"_a, "x_max"_a, "k"_a, "ell"_a, "i_integrand"_a,
                py::call_guard<py::gil_scoped_release>())
+         .def("integrate_single_cheby", &levin_power::integrate_single_cheby,
+              "A"_a, "B"_a, "col"_a, "i_integrand"_a, "k"_a, "ell"_a,
+              py::call_guard<py::gil_scoped_release>())
+         .def("integrate_single", &levin_power::integrate_single,
+              "A"_a, "B"_a, "col"_a, "i_integrand"_a, "k"_a, "ell"_a,
+              py::call_guard<py::gil_scoped_release>())
          .def("levin_integrate_bessel_single", &levin_power::levin_integrate_bessel_single,
               "x_min"_a, "x_max"_a, "k"_a, "ell"_a, "diagonal"_a,
                py::call_guard<py::gil_scoped_release>())
