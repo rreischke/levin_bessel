@@ -43,14 +43,12 @@ integral_type = 4
 ```
 
 Here you import the library, define the number of threads for hyperthreading and define the integral type which itself can take six values:
-```
 - 0: single spherical Bessel function
 - 1: single cylindrical Bessel function
 - 2: double spherical Bessel function
 - 3: double cylindrical Bessel function
 - 4: triple spherical Bessel function
 - 5: triple cylindrical Bessel function
-```
 
 Next it is time to define the integrands ``f_of_x`` over their support ``x`` and to decide whether they should be logarithmically or linearly interpolated in $x$ and $f(x)$. Then pass all of them to the class constructor
 ```python 
