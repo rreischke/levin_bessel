@@ -27,8 +27,6 @@ PYBIND11_MODULE(levin, m)
          .def("update_integrand", &levin::update_integrand,
               "x"_a, "integrand"_a, "logx"_a, "logy"_a,
               py::call_guard<py::gil_scoped_release>())
-         .def("get_bisection", &levin::get_bisection,
-              py::call_guard<py::gil_scoped_release>())
          .def("levin_integrate_bessel_single", &levin::levin_integrate_bessel_single,
               "x_min"_a, "x_max"_a, "k"_a, "ell"_a, "diagonal"_a, "result"_a,
               py::call_guard<py::gil_scoped_release>())
