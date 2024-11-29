@@ -6,7 +6,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/iostream.h>
 #include <pybind11/numpy.h>
-#include "levin.h"
+#include "./../src/levin.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;

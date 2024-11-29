@@ -7,7 +7,7 @@ from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 if (sys.platform[:6] == "darwin"
         and (distutils.sysconfig.get_config_var("CC") == "clang"
