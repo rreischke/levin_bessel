@@ -1,4 +1,5 @@
-def levin(type, x, integrand, logx, logy, nthread):
+class levin: 
+    def __init__(type, x, integrand, logx, logy, nthread):
     """
     Initialises the Levin integrator class given the type of Bessel function 
     and if it is a product or not, reads in the integrands and their support
@@ -26,3 +27,4 @@ def levin(type, x, integrand, logx, logy, nthread):
                             In other words, you can pass a series of different :math: `f(x)`.
                             
     """
+    a = None
