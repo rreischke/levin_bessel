@@ -123,7 +123,7 @@ Calculates integrals of the type:
 
 .. math::
 
-   I(k_1, k_2,\ell_!,\ell_2) = \int j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) f(x) \mathrm{d}x
+   I(k_1, k_2,\ell_!,\ell_2) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) f(x) \mathrm{d}x
 
 where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``2``or ``3``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
@@ -140,7 +140,7 @@ Calculates integrals of the type:
 
 .. math::
 
-   I(k_1, k_2, ,k_3, \ell_!,\ell_2, ell_3) = \int j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) j_{\ell_3}(xk_3) f(x) \mathrm{d}x
+   I(k_1, k_2, ,k_3, \ell_!,\ell_2, ell_3) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) j_{\ell_3}(xk_3) f(x) \mathrm{d}x
 
 where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``4``or ``5``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
