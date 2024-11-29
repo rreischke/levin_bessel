@@ -1,0 +1,4 @@
+nbsphinx
+numpydoc
+pandoc
+sphinx-rtd-theme

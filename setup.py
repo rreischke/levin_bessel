@@ -23,8 +23,8 @@ linker_args += ["-fopenmp"]
 
 ext_modules = [
     Pybind11Extension(
-        "levinpower",
-        ["src/levin_power.cpp", "levin_bessel/pybind11_interface.cpp"],
+        "levin",
+        ["src/levin.cpp", "levin_bessel/pybind11_interface.cpp"],
         cxx_std=11,
         include_dirs=["src"],
         libraries=["m", "gsl", "gslcblas"],
@@ -34,7 +34,7 @@ ext_modules = [
 ]
 
 setup(
-    name="levinpower",
+    name="levin",
     version=__version__,
     # author="Robert Reischke",
     # author_email="s",
