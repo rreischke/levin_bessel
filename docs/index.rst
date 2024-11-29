@@ -1,4 +1,4 @@
-.. image:: levin_logo.png
+.. image:: levin_logo.jpeg
    :width: 100 %
    :align: center
 
