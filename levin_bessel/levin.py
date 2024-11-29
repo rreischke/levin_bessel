@@ -21,10 +21,15 @@ class levin:
                             The integration used later when integrating should be within the
                             minimum and maximum value of this array.
 
-        integrand (2d array) Two dimensional array of the integrands :math:`f(x)`. Needs at least
-                            the shape ``len(x), 1``. Generally it should have the shape ``len(x), N``,
-                            where ``N``is the number of different integrals you want to calculate.
-                            In other words, you can pass a series of different :math: `f(x)`.
+        integrand (2d array): Two dimensional array of the integrands :math:`f(x)`. Needs at least
+                              the shape ``len(x), 1``. Generally it should have the shape ``len(x), N``,
+                              where ``N``is the number of different integrals you want to calculate.
+                              In other words, you can pass a series of different :math: `f(x)`.
+        
+        logx (bool):          Should the integrands be interpolated logarithmically in x or linearly?
+
+        logy (bool):          Should the integrands, :math:`f(x)`,  be interpolated logarithmically in :math:`y = f(x)` or linearly,
+                              automatically checks for each integrand if this is possible.
                             
     """
     a = None
