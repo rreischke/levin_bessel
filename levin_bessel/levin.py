@@ -33,3 +33,8 @@ class levin:
                             
     """
     a = None
+
+    def set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose):
+        """
+        Sets the parameters of the levin integrator, if this is not called, default values are assumed.
+        """
