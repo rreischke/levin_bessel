@@ -4,7 +4,10 @@ This page details the methods and classes provided by the ``levin`` module.
 Full Documentation
 ===================
 
+
 ``levin(type, x, integrand, logx, logy, nthread)``
+===========
+
 
 Initialises the Levin integrator class given the type of Bessel function 
 and if it is a product or not, reads in the integrands and their support
@@ -35,6 +38,8 @@ and wether they should be interpolated logarithmically or not.
 * ``logy`` (``True`` / ``False``): Should the integrands, :math:`f(x)`,  be interpolated logarithmically in :math:`y = f(x)` or linearly, automatically checks for each integrand if this is possible.
 
 * ``nthread``(`ìnteger``): Number of threads used for hyperthreading.
+
+
 
 ``set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose)``
 
