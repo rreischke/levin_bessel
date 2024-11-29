@@ -6,7 +6,7 @@ Full Documentation
 
 
 ``levin(type, x, integrand, logx, logy, nthread)``
-===========
+-----------
 
 
 Initialises the Levin integrator class given the type of Bessel function 
@@ -42,6 +42,7 @@ and wether they should be interpolated logarithmically or not.
 
 
 ``set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose)``
+-----------
 
 Sets up the internal parameters of the Levin integrator. If not called, default values are used.
 
@@ -59,6 +60,7 @@ Sets up the internal parameters of the Levin integrator. If not called, default 
 
 
 ``get_integrand(x)``
+-----------
 
 Calculates the all integrands passed to Levin (see ``levin``).
 
@@ -72,6 +74,7 @@ Calculates the all integrands passed to Levin (see ``levin``).
 
 
 ``update_integrand(x, integrand, logx, logy)``
+-----------
 
 Updates the integrand.
 
@@ -87,6 +90,7 @@ Updates the integrand.
 
 
 ``levin_integrate_bessel_single(x_min, x_max, k, ell, diagonal, result)``
+-----------
 
 Calculates integrals of the type:
 
@@ -94,7 +98,7 @@ Calculates integrals of the type:
 
     I(k,\ell) = \int_a^b j_\ell(xk) f(x) \mathrm{d}x
 
-where :math:`f(x)` are the integrands. ``type`` in ``levin`` needs to be set to ``0``or ``1``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
+where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``0``or ``1``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
 
 **Arguments:**
@@ -113,6 +117,7 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 
 
 ``levin_integrate_bessel_double(x_min, x_max, k_1, k_2, ell_1, ell_2, diagonal, result)``
+-----------
 
 Calculates integrals of the type:
 
@@ -120,7 +125,7 @@ Calculates integrals of the type:
 
    I(k_1, k_2,\ell_!,\ell_2) = \int j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) f(x) \mathrm{d}x
 
-where :math:`f(x)` are the integrands. ``type`` in ``levin`` needs to be set to ``2``or ``3``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
+where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``2``or ``3``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
 
 **Arguments:**
@@ -129,6 +134,7 @@ See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``
 
 
 ``levin_integrate_bessel_triple(x_min, x_max, k_1, k_2, k_3, ell_1, ell_2, ell_3, diagonal, result)``
+-----------
 
 Calculates integrals of the type:
 
@@ -136,7 +142,7 @@ Calculates integrals of the type:
 
    I(k_1, k_2, ,k_3, \ell_!,\ell_2, ell_3) = \int j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) j_{\ell_3}(xk_3) f(x) \mathrm{d}x
 
-where :math:`f(x)` are the integrands. ``type`` in ``levin`` needs to be set to ``4``or ``5``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
+where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``4``or ``5``. Generally, if you have specified ``N``integrands before, this function can be passed ``M``variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
 
 **Arguments:**
