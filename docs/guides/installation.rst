@@ -39,7 +39,7 @@ then navigate to the cloned directory
     pip install .
 
 On some Linux servers you will have to install ``gxx_linux-64`` by hand and the installation will not work. This usually shows the following error message in the terminal:
-``gcc: fatal error: cannot execute 'cc1plus': execvp: No such file or directory``
+``gcc: fatal error: cannot execute 'cc1plus': execvp: No such file or directory``.
 If this is the case just install it by typing
 
 .. code-block:: bash
