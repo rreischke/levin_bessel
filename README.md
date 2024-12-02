@@ -14,7 +14,7 @@ conda install conda-forge::boost
 ```
 if they are not installed already.
 
-### From sources
+### From source
 Alternatively you first clone the directory via:
 ```shell
 git clone git@github.com:rreischke/levin_bessel.git
@@ -38,7 +38,7 @@ If this is the case just install it by typing
 and redo the ``pip`` installation.
 
 ## Tutorial: How to use the library
-There is a detailed documentation of the code on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/). For a tutorial, there is a detailed python notebook in the ``tutorial`` directory called ``levin_tutorial.py``.
+There is a detailed documentation of the code on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/). For a tutorial, there is a detailed [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory
 
 
 
