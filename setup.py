@@ -24,7 +24,7 @@ linker_args += ["-fopenmp"]
 ext_modules = [
     Pybind11Extension(
         "levin",
-        ["src/levin.cpp", "levin_bessel/pybind11_interface.cpp"],
+        ["src/levin.cpp", "src/pybind11_interface.cpp"],
         cxx_std=11,
         include_dirs=["src"],
         libraries=["m", "gsl", "gslcblas"],
