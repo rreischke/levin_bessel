@@ -1,4 +1,4 @@
-name: levinpower_env
+name: levin_env
 channels:
   - conda-forge
   - defaults
