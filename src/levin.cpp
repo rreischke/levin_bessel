@@ -2,8 +2,6 @@
 #include <gsl/gsl_spline.h>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/chebyshev.hpp>
-#include <chrono>
-using namespace std::chrono;
 
 levin::levin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread)
 {
@@ -82,6 +80,11 @@ void levin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double r
     F_stacked_set_half.resize(N_thread_max);
     ce_set.resize(N_thread_max);
     ce_set_half.resize(N_thread_max);
+    if (!x_j_set.empty())
+    {
+        x_j_set.clear();
+        x_j_set_half.clear();
+    }
     x_j_set.resize(N_thread_max, std::vector<double>(n_col));
     x_j_set_half.resize(N_thread_max, std::vector<double>(n_col / 2));
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
@@ -863,7 +866,13 @@ double levin::inhomogeneity(double x, uint i_integrand, uint tid)
     {
         x = log(x);
     }
-    double result = gsl_spline_eval(spline_integrand[i_integrand][tid], x, acc_integrand[i_integrand][tid]);
+    double result;
+    int status;
+    status = gsl_spline_eval_e(spline_integrand[i_integrand][tid], x, acc_integrand[i_integrand][tid], &result);
+    if(status)
+    {
+        return 0;
+    }
     if (is_y_log[i_integrand])
     {
         result = exp(result);
@@ -1197,92 +1206,6 @@ double levin::integrate_lse_set(double A, double B, uint i_integrand)
 double levin::iterate_single(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose)
 {
     uint tid = omp_get_thread_num();
-    std::vector<double> intermediate_results;
-    if (B - A < min_interval)
-    {
-        return 0.0;
-    }
-    double borders[2] = {A, B};
-    std::vector<double> x_sub(borders, borders + 2);
-    double I_half = integrate_single(A, B, col / 2, i_integrand, k, ell);
-    double I_full = integrate_single(A, B, col, i_integrand, k, ell);
-    uint sub = 1;
-    double previous = I_half;
-    std::vector<double> approximations(1, I_full);
-    std::vector<double> error_estimates(1, fabs(I_full - I_half));
-    double result = I_full;
-    while (sub <= smax + 1)
-    {
-        result = 0.0;
-        for (uint i = 0; i < approximations.size(); i++)
-        {
-            result += approximations[i];
-        }
-        intermediate_results.push_back(result);
-        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs))
-        {
-            for (uint j = 0; j < x_sub.size(); j++)
-            {
-                bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
-            }
-            return result;
-        }
-        previous = result;
-        sub++;
-        uint i = 1;
-        while (true)
-        {
-            i = std::distance(error_estimates.begin(), std::max_element(error_estimates.begin(), error_estimates.end())) + 1;
-            if (error_estimates[i - 1] < 0)
-            {
-                if (verbose)
-                {
-                    std::cerr << "subintervals too narrow for further bisection for integrand " << i_integrand << " at k " << k << " and ell " << ell << std::endl;
-                    for (uint j = 0; j < x_sub.size(); j++)
-                    {
-                        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
-                    }
-                    return result;
-                }
-            }
-            if (x_sub[i] - x_sub[i - 1] > min_interval)
-            {
-                break;
-            }
-            error_estimates[i - 1] = -1.0;
-        }
-        x_sub.insert(x_sub.begin() + i, (x_sub[i - 1] + x_sub[i]) / 2.);
-        double x_subim1_i = (x_sub[i - 1]);
-        double x_subi_i = (x_sub[i]);
-        double x_subip1_i = (x_sub[i + 1]);
-        I_half = integrate_single(x_subim1_i, x_subi_i, col / 2, i_integrand, k, ell);
-        I_full = integrate_single(x_subim1_i, x_subi_i, col, i_integrand, k, ell);
-        approximations[i - 1] = I_full;
-        error_estimates[i - 1] = fabs(I_full - I_half);
-        I_half = integrate_single(x_subi_i, x_subip1_i, col / 2, i_integrand, k, ell);
-        I_full = integrate_single(x_subi_i, x_subip1_i, col, i_integrand, k, ell);
-        approximations.insert(approximations.begin() + i, I_full);
-        error_estimates.insert(error_estimates.begin() + i, fabs(I_full - I_half));
-    }
-    if (verbose)
-    {
-        std::cerr << "maximum number of bisections reached for integrand " << i_integrand << " at k " << k << " and ell " << ell << std::endl;
-    }
-    error_count = true;
-    if (error_count == true && verbose == true)
-    {
-        std::cerr << "Convergence cannot be reached for the current settings for integrand " << i_integrand << " try to decrease the relative accuracy or increase the possible number of bisections or the number of collocation points." << std::endl;
-    }
-    for (uint j = 0; j < x_sub.size(); j++)
-    {
-        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
-    }
-    return result;
-}
-
-double levin::iterate_single_cheby(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose)
-{
-    uint tid = omp_get_thread_num();
     if (B - A < min_interval)
     {
         return 0.0;
@@ -1475,7 +1398,7 @@ double levin::iterate_triple(double A, double B, uint col, uint i_integrand, dou
             result += approximations[i];
         }
         intermediate_results.push_back(result);
-        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs))
+        if (abs(result - previous) < GSL_MAX(tol_rel * abs(result), tol_abs))
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
@@ -1539,7 +1462,7 @@ double levin::iterate_triple(double A, double B, uint col, uint i_integrand, dou
 double levin::levin_integrate_single_bessel(double x_min, double x_max, double k, uint ell, uint i_integrand)
 {
     uint n_sub = maximum_number_subintervals;
-    return iterate_single_cheby(x_min, x_max, n_col, i_integrand, k, ell, n_sub, speak_to_me);
+    return iterate_single(x_min, x_max, n_col, i_integrand, k, ell, n_sub, speak_to_me);
 }
 
 double levin::levin_integrate_double_bessel(double x_min, double x_max, double k_1, double k_2, uint ell_1, uint ell_2, uint i_integrand)

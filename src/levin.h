@@ -51,9 +51,9 @@ private:
   bool error;
   double ratio_cquad_qag_time;
 
-  double min_interval = 1e-5;
+  double min_interval = 0;
   double tol_rel = 1e-6;
-  double tol_abs = 1e-40;
+  double tol_abs = 0.;
   uint maximum_number_subintervals = 32;
 
   gsl_error_handler_t *old_handler;
@@ -114,8 +114,6 @@ public:
   double integrate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3);
 
   double integrate_lse_set(double A, double B, uint i_integrand);
-
-  double iterate_single_cheby(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose);
 
   double iterate_single(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose);
 

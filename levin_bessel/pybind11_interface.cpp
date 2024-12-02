@@ -6,7 +6,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/iostream.h>
 #include <pybind11/numpy.h>
-#include "./../src/levin.h"
+#include "levin.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -23,6 +23,8 @@ PYBIND11_MODULE(levin, m)
               py::call_guard<py::gil_scoped_release>())
          .def("get_integrand", &levin::get_integrand,
               "x"_a,
+              py::call_guard<py::gil_scoped_release>())
+         .def("get_bisection", &levin::get_bisection,
               py::call_guard<py::gil_scoped_release>())
          .def("update_integrand", &levin::update_integrand,
               "x"_a, "integrand"_a, "logx"_a, "logy"_a,

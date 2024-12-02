@@ -6,7 +6,7 @@ Full Documentation
 
 
 ``levin(type, x, integrand, logx, logy, nthread)``
-"""""""""""
+'''''''''''
 
 
 Initialises the Levin integrator class given the type of Bessel function 
@@ -42,7 +42,7 @@ and wether they should be interpolated logarithmically or not.
 
 
 ``set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose)``
-"""""""""""
+'''''''''''
 
 Sets up the internal parameters of the Levin integrator. If not called, default values are used.
 
@@ -60,7 +60,7 @@ Sets up the internal parameters of the Levin integrator. If not called, default 
 
 
 ``get_integrand(x)``
-"""""""""""
+'''''''''''
 
 Calculates the all integrands passed to Levin (see ``levin``).
 
@@ -74,7 +74,7 @@ Calculates the all integrands passed to Levin (see ``levin``).
 
 
 ``update_integrand(x, integrand, logx, logy)``
------------
+'''''''''''
 
 Updates the integrand.
 
@@ -90,7 +90,7 @@ Updates the integrand.
 
 
 ``levin_integrate_bessel_single(x_min, x_max, k, ell, diagonal, result)``
-"""""""""""
+'''''''''''
 
 Calculates integrals of the type:
 
@@ -109,7 +109,7 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 
 * ``k`` (1d ``numpy`` array): Values of the frequency in the Bessel function, :math:`k`. This array has shape ``(M)``.
 
-* ``ell`` (1d ``numpy`` array): Values of the order of the Bessel function, :math:`\ell`. This array has shape ``(M)``.
+* ``ell`` (1d ``numpy`` array of ``integers): Values of the order of the Bessel function, :math:`\ell`. This array has shape ``(M)``.
 
 * ``diagonal`` (``True`` / ``False``): If ``M = N`` the code can be asked to only calculate the diagonal elements (``True``) of the ``(N,N)`` integrals.
 
@@ -117,7 +117,7 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 
 
 ``levin_integrate_bessel_double(x_min, x_max, k_1, k_2, ell_1, ell_2, diagonal, result)``
-"""""""""""
+'''''''''''
 
 Calculates integrals of the type:
 
@@ -134,7 +134,7 @@ See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``
 
 
 ``levin_integrate_bessel_triple(x_min, x_max, k_1, k_2, k_3, ell_1, ell_2, ell_3, diagonal, result)``
-"""""""""""
+'''''''''''
 
 Calculates integrals of the type:
 

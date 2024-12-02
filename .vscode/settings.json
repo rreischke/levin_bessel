@@ -53,6 +53,7 @@
         "variant": "cpp",
         "algorithm": "cpp",
         "__memory": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "chrono": "cpp"
     }
 }

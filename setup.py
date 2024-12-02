@@ -7,12 +7,12 @@ from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "0.0.5"
+__version__ = "0.0.7"
 
 if (sys.platform[:6] == "darwin"
         and (distutils.sysconfig.get_config_var("CC") == "clang"
                 or os.environ.get("CC", "") == "clang")):
-    compiler_args = ["-Xpreprocessor"]
+    compiler_args = ["-Xpreprocessor", "-O3", "-pedantic"]
     linker_args = ["-mlinker-version=305", "-Xpreprocessor"]
 else:
     compiler_args = []
