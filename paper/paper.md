@@ -17,7 +17,7 @@ Bessel functions naturally occur in physical systems with some degree of rotatio
 
 
 # Statement of need
-Typical approaches numerically estimate integrals over highly-oscillatory integrands are based on Fast Fourier Transforms (FFTLog) `[@schoneberg_2018,@grasshorn_2018,@fang_2020]` and asymptotic expansions `[@levin_1996,@iserles_efficient_2005]`. In `pylevin`, we implement one of the former methods, in particular, the adaptive Levin collocation `[@levin_1996,@chen_2022,@leonard_2023]`. Extending and improving the work done in `@zieser_2016`, `pylevin`can solve integrals of the type:
+Typical approaches numerically estimate integrals over highly-oscillatory integrands are based on Fast Fourier Transforms (FFTLog) [@schoneberg_2018,@grasshorn_2018,@fang_2020] and asymptotic expansions [@levin_1996,@iserles_efficient_2005]. In `pylevin`, we implement one of the former methods, in particular, the adaptive Levin collocation [@levin_1996,@chen_2022,@leonard_2023]. Extending and improving the work done in @zieser_2016, `pylevin`can solve integrals of the type:
 
 $$
 I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3) = \int_{x_1}^{x_2} f(x) \prod_{i=1}^N j_{\ell_i}(k_ix)\,,\quad N= 1,2,3\,,
@@ -28,7 +28,17 @@ non-oscillatory function, i.e. with frequencies much lower than the one of the p
 
 In contrast to other implementations for highly oscillatory integrals, `pylevin` is very flexible, as it is not hardcoded and tailored to one particular application but is completely agnostic regarding the integrand. Furthermore, it implements integrals over three Bessel functions for the first time. These are for example required in many cosmological applications for higher-order statistics. Due to its implementation in a statically typed compiled language, it is also extremely fast, while making use of the convenience and white-spread use of `python` via `pybind`. 
 
-As an example, we show the performance of `pylevin`on a single core on an Apple M3
+As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
+We use the following integral as an example:
+
+$$
+\int_{1\times 10^{-5}}^{100}\mathrm{d}x (x^3 + x^2 + x) j_5(xk)j_{10}(xk)\,.
+$$
+
+The results are shown in \autoref{fig:figure}
+
+![Top panel: Result of the integral times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure}](paper_plot_two_bessel.pdf)
+
 
 
 # References
