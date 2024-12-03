@@ -17,7 +17,14 @@ Bessel functions naturally occur in physical systems with some degree of rotatio
 
 
 # Statement of need
-Typical approaches numerically estimate integrals over highly-oscillatory integrands are based on Fast Fourier Transforms (FFTLog) and asymptotic expansions [@iserles_efficient_2005], `pylevin` implements the latter method 
+Typical approaches numerically estimate integrals over highly-oscillatory integrands are based on Fast Fourier Transforms (FFTLog) `[@schoneberg_2018,@grasshorn_2018,@fang_2020]` and asymptotic expansions `[@levin_1996,@iserles_efficient_2005]`. In `pylevin`, we implement one of the former methods, in particular, the adaptive Levin collocation `[@levin_1996,@chen_2022,@leonard_2023]`. Extending and improving the work done in `@zieser_2016`, `pylevin`can solve integrals of the type:
+
+$$
+I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3) & = \int_{x_1}^{x_2} f(x) \prod_{i=1}^N j_{\ell_i}(k_ix)\,,\quad N= 1,2,3\,,
+$$
+
+here $j_\ell(x)$ denotes a spherical or cylindrical Bessel function of order $\ell$ and $f(x)$ can be any
+non-oscillatory function, i.e. with frequencies much lower than the one of the product of Bessel functions. The main code is implemented in `C++` and wrapped into `python`. Due to the way `pylevin` implements Levin's method it makes extensive use of precomputed quantities allowing updating the function $f(x)$ and making successive calls of the integration routine an order of magnitude faster than the first call. An aspect that is particularly important for situations where the same type of integral needs to be evaluated many times for slightly different $f(x)$. This is for example the case in inference when running Markov Chain Monte-Carlo.
 
 
 # References
