@@ -7,7 +7,7 @@ from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 if (sys.platform[:6] == "darwin"
         and (distutils.sysconfig.get_config_var("CC") == "clang"
@@ -23,9 +23,9 @@ linker_args += ["-fopenmp"]
 
 ext_modules = [
     Pybind11Extension(
-        "levin",
-        ["src/levin.cpp", "src/pybind11_interface.cpp"],
-        cxx_std=11,
+        "pylevin",
+        ["src/pylevin.cpp", "src/pybind11_interface.cpp"],
+        cxx_std=20,
         include_dirs=["src"],
         libraries=["m", "gsl", "gslcblas"],
         extra_compile_args=compiler_args,
@@ -34,7 +34,7 @@ ext_modules = [
 ]
 
 setup(
-    name="levin",
+    name="pylevin",
     version=__version__,
     # author="Robert Reischke",
     # author_email="s",
@@ -44,4 +44,5 @@ setup(
     ext_modules=ext_modules,
     extras_require={"test": "pytest"},
     zip_safe=False,
+    headers=['src/pylevin.h'],
 )

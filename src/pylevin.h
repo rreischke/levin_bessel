@@ -1,5 +1,5 @@
-#ifndef LEVIN_H
-#define LEVIN_H
+#ifndef PYLEVIN_H
+#define PYLEVIN_H
 
 #include <vector>
 #include <numeric>
@@ -17,11 +17,10 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <pybind11/numpy.h>
-
 #include <cmath>
 #include <thread>
 
-class levin
+class pylevin
 {
 private:
   std::vector<std::vector<gsl_interp_accel *>> acc_integrand;
@@ -61,9 +60,9 @@ private:
   void set_pointer();
 
 public:
-  levin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread);
+  pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread);
 
-  ~levin();
+  ~pylevin();
 
   void init_splines(std::vector<double> &x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy);
 

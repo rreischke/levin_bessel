@@ -1,9 +1,9 @@
-#include "levin.h"
+#include "pylevin.h"
 #include <gsl/gsl_spline.h>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/chebyshev.hpp>
 
-levin::levin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread)
+pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread)
 {
     if (integrand.size() != x.size())
     {
@@ -33,7 +33,7 @@ levin::levin(uint type_in, std::vector<double> x, const std::vector<std::vector<
     set_levin(8, 32, 1e-4, false, false);
 }
 
-levin::~levin()
+pylevin::~pylevin()
 {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
     for (uint i = 0; i < n_integrand; i++)
@@ -68,7 +68,7 @@ levin::~levin()
     }
 }
 
-void levin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose)
+void pylevin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose)
 {
     n_col = (n_col_in + 1) / 2;
     n_col *= 2;
@@ -100,12 +100,12 @@ void levin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double r
     }
 }
 
-std::vector<std::vector<std::vector<double>>> levin::get_bisection()
+std::vector<std::vector<std::vector<double>>> pylevin::get_bisection()
 {
     return bisection;
 }
 
-void levin::init_splines(std::vector<double> &x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy)
+void pylevin::init_splines(std::vector<double> &x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy)
 {
     n_integrand = integrand[0].size();
     if (!bisection_set)
@@ -177,12 +177,12 @@ void levin::init_splines(std::vector<double> &x, const std::vector<std::vector<d
     }
 }
 
-void levin::update_integrand(std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy)
+void pylevin::update_integrand(std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy)
 {
     init_splines(x, integrand, logx, logy);
 }
 
-std::vector<std::vector<double>> levin::get_integrand(std::vector<double> x)
+std::vector<std::vector<double>> pylevin::get_integrand(std::vector<double> x)
 {
     std::vector<std::vector<double>> result(x.size(), std::vector<double>(n_integrand));
     for (uint i_x = 0; i_x < x.size(); i_x++)
@@ -205,7 +205,7 @@ std::vector<std::vector<double>> levin::get_integrand(std::vector<double> x)
     return result;
 }
 
-double levin::w_single_bessel(double x, double k, uint ell, uint i)
+double pylevin::w_single_bessel(double x, double k, uint ell, uint i)
 {
     if (super_accurate == false)
     {
@@ -264,7 +264,7 @@ double levin::w_single_bessel(double x, double k, uint ell, uint i)
     return 0.0;
 }
 
-double levin::w_double_bessel(double x, double k_1, double k_2, uint ell_1, uint ell_2, uint i)
+double pylevin::w_double_bessel(double x, double k_1, double k_2, uint ell_1, uint ell_2, uint i)
 {
     if (super_accurate == false)
     {
@@ -339,7 +339,7 @@ double levin::w_double_bessel(double x, double k_1, double k_2, uint ell_1, uint
     return 0.0;
 }
 
-double levin::w_triple_bessel(double x, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint i)
+double pylevin::w_triple_bessel(double x, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint i)
 {
     if (super_accurate == false)
     {
@@ -438,7 +438,7 @@ double levin::w_triple_bessel(double x, double k_1, double k_2, double k_3, uint
     return 0.0;
 }
 
-double levin::A_matrix_single(uint i, uint j, double x, double k, uint ell)
+double pylevin::A_matrix_single(uint i, uint j, double x, double k, uint ell)
 {
     if (type == 0)
     {
@@ -481,7 +481,7 @@ double levin::A_matrix_single(uint i, uint j, double x, double k, uint ell)
     return 0.0;
 }
 
-double levin::A_matrix_double(uint i, uint j, double x, double k_1, double k_2, uint ell_1, uint ell_2)
+double pylevin::A_matrix_double(uint i, uint j, double x, double k_1, double k_2, uint ell_1, uint ell_2)
 {
     if (type == 2)
     {
@@ -564,7 +564,7 @@ double levin::A_matrix_double(uint i, uint j, double x, double k_1, double k_2, 
     return 0.0;
 }
 
-double levin::A_matrix_triple(uint i, uint j, double x, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
+double pylevin::A_matrix_triple(uint i, uint j, double x, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
 {
     if (type == 4)
     {
@@ -833,7 +833,7 @@ double levin::A_matrix_triple(uint i, uint j, double x, double k_1, double k_2, 
     return 0.0;
 }
 
-void levin::setNodes_cheby(uint i)
+void pylevin::setNodes_cheby(uint i)
 {
     for (uint j = 0; j < n_col; j++)
     {
@@ -845,22 +845,22 @@ void levin::setNodes_cheby(uint i)
     }
 }
 
-double levin::map_y_to_x(double y, double A, double B)
+double pylevin::map_y_to_x(double y, double A, double B)
 {
     return -(A * (y - 1.) - B * (y + 1.)) / 2;
 }
 
-double levin::basis_function_cheby(double x, uint m)
+double pylevin::basis_function_cheby(double x, uint m)
 {
     return boost::math::chebyshev_t(m, x);
 }
 
-double levin::basis_function_prime_cheby(double x, uint m)
+double pylevin::basis_function_prime_cheby(double x, uint m)
 {
     return boost::math::chebyshev_t_prime(m, x);
 }
 
-double levin::inhomogeneity(double x, uint i_integrand, uint tid)
+double pylevin::inhomogeneity(double x, uint i_integrand, uint tid)
 {
     if (is_x_log)
     {
@@ -880,7 +880,7 @@ double levin::inhomogeneity(double x, uint i_integrand, uint tid)
     return result;
 }
 
-void levin::solve_LSE_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
+void pylevin::solve_LSE_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
 {
     uint tid = omp_get_thread_num();
     gsl_matrix *matrix_G = gsl_matrix_alloc(d * col, d * col);
@@ -950,7 +950,7 @@ void levin::solve_LSE_single(double A, double B, uint col, uint i_integrand, dou
     gsl_matrix_free(matrix_G);
 }
 
-void levin::solve_LSE_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2)
+void pylevin::solve_LSE_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2)
 {
     uint tid = omp_get_thread_num();
     gsl_matrix *matrix_G = gsl_matrix_alloc(d * col, d * col);
@@ -1020,7 +1020,7 @@ void levin::solve_LSE_double(double A, double B, uint col, uint i_integrand, dou
     gsl_matrix_free(matrix_G);
 }
 
-void levin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
+void pylevin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
 {
     uint tid = omp_get_thread_num();
     gsl_matrix *matrix_G = gsl_matrix_alloc(d * col, d * col);
@@ -1090,7 +1090,7 @@ void levin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, dou
     gsl_matrix_free(matrix_G);
 }
 
-double levin::p_cheby(double A, double B, uint i, double x, uint col, gsl_vector *c)
+double pylevin::p_cheby(double A, double B, uint i, double x, uint col, gsl_vector *c)
 {
     double result = 0.0;
     for (uint m = 0; m < col; m++)
@@ -1100,7 +1100,7 @@ double levin::p_cheby(double A, double B, uint i, double x, uint col, gsl_vector
     return result;
 }
 
-std::vector<double> levin::p_precompute(double A, double B, uint i, double x, uint col, gsl_vector *c)
+std::vector<double> pylevin::p_precompute(double A, double B, uint i, double x, uint col, gsl_vector *c)
 {
     uint n = (col + 1) / 2;
     n *= 2;
@@ -1113,7 +1113,7 @@ std::vector<double> levin::p_precompute(double A, double B, uint i, double x, ui
     return result;
 }
 
-double levin::integrate_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
+double pylevin::integrate_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
 {
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1137,7 +1137,7 @@ double levin::integrate_single(double A, double B, uint col, uint i_integrand, d
     return result;
 }
 
-double levin::integrate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2)
+double pylevin::integrate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2)
 {
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1161,7 +1161,7 @@ double levin::integrate_double(double A, double B, uint col, uint i_integrand, d
     return result;
 }
 
-double levin::integrate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
+double pylevin::integrate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
 {
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1185,7 +1185,7 @@ double levin::integrate_triple(double A, double B, uint col, uint i_integrand, d
     return result;
 }
 
-double levin::integrate_lse_set(double A, double B, uint i_integrand)
+double pylevin::integrate_lse_set(double A, double B, uint i_integrand)
 {
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1203,7 +1203,7 @@ double levin::integrate_lse_set(double A, double B, uint i_integrand)
     return (B - A) / 2 * result;
 }
 
-double levin::iterate_single(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose)
+double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, double k, uint ell, uint smax, bool verbose)
 {
     uint tid = omp_get_thread_num();
     if (B - A < min_interval)
@@ -1287,7 +1287,7 @@ double levin::iterate_single(double A, double B, uint col, uint i_integrand, dou
     return result;
 }
 
-double levin::iterate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2, uint smax, bool verbose)
+double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2, uint smax, bool verbose)
 {
     uint tid = omp_get_thread_num();
     std::vector<double> intermediate_results;
@@ -1373,7 +1373,7 @@ double levin::iterate_double(double A, double B, uint col, uint i_integrand, dou
     return result;
 }
 
-double levin::iterate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint smax, bool verbose)
+double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint smax, bool verbose)
 {
     uint tid = omp_get_thread_num();
     std::vector<double> intermediate_results;
@@ -1459,25 +1459,25 @@ double levin::iterate_triple(double A, double B, uint col, uint i_integrand, dou
     return result;
 }
 
-double levin::levin_integrate_single_bessel(double x_min, double x_max, double k, uint ell, uint i_integrand)
+double pylevin::levin_integrate_single_bessel(double x_min, double x_max, double k, uint ell, uint i_integrand)
 {
     uint n_sub = maximum_number_subintervals;
     return iterate_single(x_min, x_max, n_col, i_integrand, k, ell, n_sub, speak_to_me);
 }
 
-double levin::levin_integrate_double_bessel(double x_min, double x_max, double k_1, double k_2, uint ell_1, uint ell_2, uint i_integrand)
+double pylevin::levin_integrate_double_bessel(double x_min, double x_max, double k_1, double k_2, uint ell_1, uint ell_2, uint i_integrand)
 {
     uint n_sub = maximum_number_subintervals;
     return iterate_double(x_min, x_max, n_col, i_integrand, k_1, k_2, ell_1, ell_2, n_sub, speak_to_me);
 }
 
-double levin::levin_integrate_triple_bessel(double x_min, double x_max, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint i_integrand)
+double pylevin::levin_integrate_triple_bessel(double x_min, double x_max, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint i_integrand)
 {
     uint n_sub = maximum_number_subintervals;
     return iterate_triple(x_min, x_max, n_col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3, n_sub, speak_to_me);
 }
 
-void levin::levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, bool diagonal, pybind11::array_t<double> &result)
 {
     if (d > 2)
     {
@@ -1708,7 +1708,7 @@ void levin::levin_integrate_bessel_single(std::vector<double> x_min, std::vector
     }
 }
 
-void levin::levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, bool diagonal, pybind11::array_t<double> &result)
 {
     if (d == 8 || d == 2)
     {
@@ -1943,7 +1943,7 @@ void levin::levin_integrate_bessel_double(std::vector<double> x_min, std::vector
     }
 }
 
-void levin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<double> k_3, std::vector<uint> ell_1, std::vector<uint> ell_2, std::vector<uint> ell_3, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<double> k_3, std::vector<uint> ell_1, std::vector<uint> ell_2, std::vector<uint> ell_3, bool diagonal, pybind11::array_t<double> &result)
 {
     if (d != 8)
     {
