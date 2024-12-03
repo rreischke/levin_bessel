@@ -7,7 +7,7 @@ The library is available via PyPi installation, so you can just install it using
 
 .. code-block:: bash
 
-    pip install levin
+    pip install pylevin
 
 which installs the levin package and you are ready to go. Note that you need certain packages which you have to install via ``conda-forge``, in particular you will need the GSL, BOOST and GXX (on some linux servers) to be installed. You can grab them all via
 
