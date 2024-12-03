@@ -1,13 +1,14 @@
 import sys
 import os
 from setuptools import setup
+from pathlib import Path
 
 # Available at setup time due to pyproject.toml
 from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 if (sys.platform[:6] == "darwin"
         and (distutils.sysconfig.get_config_var("CC") == "clang"
@@ -33,14 +34,19 @@ ext_modules = [
         ),
 ]
 
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
+
 setup(
     name="pylevin",
     version=__version__,
     # author="Robert Reischke",
     # author_email="s",
     # url="",
-    # description="",
-    # long_description="",
+    description="Implementing the Levin method to calculate integrals over product of up to three Bessel functions",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     ext_modules=ext_modules,
     extras_require={"test": "pytest"},
     zip_safe=False,
