@@ -13,22 +13,16 @@ using namespace pybind11::literals;
 
 PYBIND11_MODULE(pylevin, m)
 {
-     m.doc() = "Compute integrals with levin's method.";
+     m.doc() = "Compute integrals with levin's method of products of up to three Bessel function of the first kind";
 
      py::class_<pylevin>(m, "pylevin")
          .def(py::init<uint, std::vector<double>, std::vector<std::vector<double>>, bool, bool, int>(),
-              "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a, R"pbdoc(
-    This function accepts an integer, a float, and a list of integers. 
-
-    :param a: An integer parameter used for...
-    :type a: int
-    :param b: A floating-point parameter used for...
-    :type b: float
-    :param c: A list of integers, optional, default is empty.
-    :type c: List[int]
-    :return: None
-    :rtype: None
-             )pbdoc")
+              "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a,
+              "Constructor of the pylevin class\n"
+              "\n"
+              "Initialises the Levin integrator class given the type of Bessel function"
+              "and if it is a product or not, reads in the integrands and their support"
+              "and wether they should be interpolated logarithmically or not.")
          .def("set_levin", &pylevin::set_levin,
               "n_col_in"_a, "maximum_number_bisections_in"_a, "relative_accuracy_in"_a, "super_accurate"_a, "verbose"_a,
               py::call_guard<py::gil_scoped_release>())
