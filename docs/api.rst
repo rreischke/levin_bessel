@@ -153,7 +153,7 @@ See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``
 
 **Stuff**
 
-.. autoclass:: class
+.. autoclass:: pylevin
    :members:
    :imported-members:
    :show-inheritance:
