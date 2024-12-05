@@ -13,7 +13,14 @@
 ---
 
 # Summary
-Bessel functions naturally occur in physical systems with some degree of rotational symmetry. Derived quantities for these physical models often involve integrals over those functions which are not solvable analytically and have to be treated numerically instead. However, standard integration techniques like quadrature generally fail to solve these types of integrals efficiently and reliably due to the very fast oscillations of the Bessel functions. Providing general tools to quickly compute these types of integrals is therefore paramount.
+Bessel functions naturally occur in physical systems with some degree of rotational symmetry. Derived quantities for these physical models often involve integrals over those functions which are not solvable analytically and have to be treated numerically instead. However, standard integration techniques like quadrature generally fail to solve these types of integrals efficiently and reliably due to the very fast oscillations of the Bessel functions. Providing general tools to quickly compute these types of integrals is therefore paramount. `pylevin` can calculate the following types of frequently encountered integrals
+
+$$
+I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3) = \int_{x_1}^{x_2} \mathrm{d}x\,f(x) \prod_{i=1}^N j_{\ell_i}(k_ix)\,,\quad N= 1,2,3\,,
+$$
+
+here $j_\ell(x)$ denotes a spherical or cylindrical Bessel function of order $\ell$ and $f(x)$ can be any
+non-oscillatory function, i.e. with frequencies much lower than the one of the product of Bessel functions.
 
 
 # Statement of need

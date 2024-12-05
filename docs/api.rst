@@ -148,3 +148,13 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 **Arguments:**
 
 See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``, etc. must have the shapes as ``ell``, ``k`` above.
+
+
+
+**Stuff**
+
+.. autoclass:: class
+   :members:
+   :imported-members:
+   :show-inheritance:
+   :special-members:

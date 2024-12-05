@@ -104,8 +104,6 @@ public:
 
   double p_cheby(double A, double B, uint i, double x, uint col, gsl_vector *c);
 
-  std::vector<double> p_precompute(double A, double B, uint i, double x, uint col, gsl_vector *c);
-
   double integrate_single(double A, double B, uint col, uint i_integrand, double k, uint ell);
 
   double integrate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2);

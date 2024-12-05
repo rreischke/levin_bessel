@@ -869,7 +869,7 @@ double pylevin::inhomogeneity(double x, uint i_integrand, uint tid)
     double result;
     int status;
     status = gsl_spline_eval_e(spline_integrand[i_integrand][tid], x, acc_integrand[i_integrand][tid], &result);
-    if(status)
+    if (status)
     {
         return 0;
     }
@@ -1100,19 +1100,6 @@ double pylevin::p_cheby(double A, double B, uint i, double x, uint col, gsl_vect
     return result;
 }
 
-std::vector<double> pylevin::p_precompute(double A, double B, uint i, double x, uint col, gsl_vector *c)
-{
-    uint n = (col + 1) / 2;
-    n *= 2;
-    std::vector<double> result(2, 0.0);
-    for (uint m = 0; m < n; m++)
-    {
-        result[0] += gsl_vector_get(c, i * n + m) * pow(-1, m);
-        result[1] += gsl_vector_get(c, i * n + m);
-    }
-    return result;
-}
-
 double pylevin::integrate_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
 {
     uint tid = omp_get_thread_num();
@@ -1194,11 +1181,23 @@ double pylevin::integrate_lse_set(double A, double B, uint i_integrand)
         gsl_vector_set(F_stacked_set[tid], j, inhomogeneity(map_y_to_x(x_j_set[tid][j], A, B), i_integrand, tid));
     }
     gsl_linalg_LU_solve(LU_G_matrix[i_integrand][index_variable[tid]][index_bisection[tid]], permutation[i_integrand][index_variable[tid]][index_bisection[tid]], F_stacked_set[tid], ce_set[tid]);
-    std::vector<double> aux(2, 0);
     for (uint i = 0; i < d; i++)
     {
-        aux = p_precompute(A, B, i, B, n_col, ce_set[tid]);
-        result += aux[1] * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid] + 1][i] - aux[0] * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid]][i];
+        double aux_a = 0;
+        double aux_b = 0;
+        for (uint m = 0; m < n_col; m++)
+        {
+            if (m % 2 == 0)
+            {
+                aux_a += gsl_vector_get(ce_set[tid], i * n_col + m);
+            }
+            else
+            {
+                aux_a -= gsl_vector_get(ce_set[tid], i * n_col + m);
+            }
+            aux_b += gsl_vector_get(ce_set[tid], i * n_col + m);
+        }
+        result += aux_b * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid] + 1][i] - aux_a * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid]][i];
     }
     return (B - A) / 2 * result;
 }
@@ -1547,8 +1546,8 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
                     index_variable[tid] = i_variable;
                     for (uint i_bisec = 0; i_bisec < bisection[i_variable][i_variable].size() - 1; i_bisec++)
                     {
-                        index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
+                         index_bisection[tid] = i_bisec;
+                         result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
                     }
                 }
             }

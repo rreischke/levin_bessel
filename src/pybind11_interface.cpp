@@ -17,7 +17,18 @@ PYBIND11_MODULE(pylevin, m)
 
      py::class_<pylevin>(m, "pylevin")
          .def(py::init<uint, std::vector<double>, std::vector<std::vector<double>>, bool, bool, int>(),
-              "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a)
+              "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a, R"pbdoc(
+    This function accepts an integer, a float, and a list of integers. 
+
+    :param a: An integer parameter used for...
+    :type a: int
+    :param b: A floating-point parameter used for...
+    :type b: float
+    :param c: A list of integers, optional, default is empty.
+    :type c: List[int]
+    :return: None
+    :rtype: None
+             )pbdoc")
          .def("set_levin", &pylevin::set_levin,
               "n_col_in"_a, "maximum_number_bisections_in"_a, "relative_accuracy_in"_a, "super_accurate"_a, "verbose"_a,
               py::call_guard<py::gil_scoped_release>())
