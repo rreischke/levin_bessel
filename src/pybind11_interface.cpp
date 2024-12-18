@@ -21,12 +21,17 @@ PYBIND11_MODULE(pylevin, m)
               "and wether they should be interpolated logarithmically or not.");
 
      py::class_<pylevin>(m, "pylevin")
+          """asdasd"""
          .def(py::init<uint, std::vector<double>, std::vector<std::vector<double>>, bool, bool, int>(),
               "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a)
          .def("set_levin", &pylevin::set_levin,
               "n_col_in"_a, "maximum_number_bisections_in"_a, "relative_accuracy_in"_a, "super_accurate"_a, "verbose"_a,
-              py::call_guard<py::gil_scoped_release>(),
-              "Sets up the internal parameters of the Levin integrator. If not called, default values are used.")
+              py::call_guard<py::gil_scoped_release>(), R"mydelimiter(
+    The foo function
+
+    Parameters
+    ----------
+)mydelimiter")
          .def("get_integrand", &pylevin::get_integrand,
               "x"_a,
               py::call_guard<py::gil_scoped_release>())

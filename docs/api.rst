@@ -158,3 +158,5 @@ See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``
    :imported-members:
    :show-inheritance:
    :special-members:
+
+.. automodule:: pylevin.set_levin
