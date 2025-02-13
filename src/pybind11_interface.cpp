@@ -21,7 +21,6 @@ PYBIND11_MODULE(pylevin, m)
               "and wether they should be interpolated logarithmically or not.");
 
      py::class_<pylevin>(m, "pylevin")
-          """asdasd"""
          .def(py::init<uint, std::vector<double>, std::vector<std::vector<double>>, bool, bool, int>(),
               "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a)
          .def("set_levin", &pylevin::set_levin,

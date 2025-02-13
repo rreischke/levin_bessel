@@ -164,3 +164,4 @@ cython_debug/
 
 
 paper/paper_plot.ipynb
+test/

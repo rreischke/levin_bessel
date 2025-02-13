@@ -1517,6 +1517,22 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
         else
         {
             if (!diagonal)
+            /**{
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                for (uint flat_variable = 0; flat_variable < x_max.size() * n_integrand; flat_variable++)
+                {
+                    uint tid = omp_get_thread_num();
+                    uint i_variable = int(flat_variable / n_integrand);
+                    uint i_integrand = flat_variable - n_integrand * i_variable;
+                    index_variable[tid] = i_variable;
+                    index_integral[tid] = i_integrand;
+                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                    {
+                        index_bisection[tid] = i_bisec;
+                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                    }
+                }
+            }*/
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
@@ -1546,8 +1562,8 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
                     index_variable[tid] = i_variable;
                     for (uint i_bisec = 0; i_bisec < bisection[i_variable][i_variable].size() - 1; i_bisec++)
                     {
-                         index_bisection[tid] = i_bisec;
-                         result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
+                        index_bisection[tid] = i_bisec;
+                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
                     }
                 }
             }
