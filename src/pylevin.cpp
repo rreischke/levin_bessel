@@ -1102,6 +1102,10 @@ double pylevin::p_cheby(double A, double B, uint i, double x, uint col, gsl_vect
 
 double pylevin::integrate_single(double A, double B, uint col, uint i_integrand, double k, uint ell)
 {
+    if (A == B)
+    {
+        return 0;
+    }
     uint tid = omp_get_thread_num();
     double result = 0.0;
     solve_LSE_single(A, B, col, i_integrand, k, ell);
@@ -1126,6 +1130,10 @@ double pylevin::integrate_single(double A, double B, uint col, uint i_integrand,
 
 double pylevin::integrate_double(double A, double B, uint col, uint i_integrand, double k_1, double k_2, uint ell_1, uint ell_2)
 {
+    if (A == B)
+    {
+        return 0;
+    }
     uint tid = omp_get_thread_num();
     double result = 0.0;
     solve_LSE_double(A, B, col, i_integrand, k_1, k_2, ell_1, ell_2);
@@ -1150,6 +1158,10 @@ double pylevin::integrate_double(double A, double B, uint col, uint i_integrand,
 
 double pylevin::integrate_triple(double A, double B, uint col, uint i_integrand, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3)
 {
+    if (A == B)
+    {
+        return 0;
+    }
     uint tid = omp_get_thread_num();
     double result = 0.0;
     solve_LSE_triple(A, B, col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
@@ -1517,22 +1529,6 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
         else
         {
             if (!diagonal)
-            /**{
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint flat_variable = 0; flat_variable < x_max.size() * n_integrand; flat_variable++)
-                {
-                    uint tid = omp_get_thread_num();
-                    uint i_variable = int(flat_variable / n_integrand);
-                    uint i_integrand = flat_variable - n_integrand * i_variable;
-                    index_variable[tid] = i_variable;
-                    index_integral[tid] = i_integrand;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
-                    {
-                        index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
-                    }
-                }
-            }*/
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
