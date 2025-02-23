@@ -41,6 +41,6 @@ and redo the ``pip`` installation.
 There is a detailed documentation of the code on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/). For a tutorial, there is a detailed [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory
 
 
-## Using pylevin
-If you use please cite the implementation described in [2502.12142](https://arxiv.org/abs/2502.12142). You can find references to the original method therein.
+## Citing pylevin
+If you use this code please cite the implementation described in [2502.12142](https://arxiv.org/abs/2502.12142). You can find references to the original method therein.
 
