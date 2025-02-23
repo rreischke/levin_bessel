@@ -1104,7 +1104,7 @@ double pylevin::integrate_single(double A, double B, uint col, uint i_integrand,
 {
     if (A == B)
     {
-        return 0;
+        return 0.;
     }
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1132,7 +1132,7 @@ double pylevin::integrate_double(double A, double B, uint col, uint i_integrand,
 {
     if (A == B)
     {
-        return 0;
+        return 0.;
     }
     uint tid = omp_get_thread_num();
     double result = 0.0;
@@ -1160,7 +1160,7 @@ double pylevin::integrate_triple(double A, double B, uint col, uint i_integrand,
 {
     if (A == B)
     {
-        return 0;
+        return 0.;
     }
     uint tid = omp_get_thread_num();
     double result = 0.0;

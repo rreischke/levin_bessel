@@ -109,9 +109,9 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 
 * ``k`` (1d ``numpy`` array): Values of the frequency in the Bessel function, :math:`k`. This array has shape ``(M)``.
 
-* ``ell`` (1d ``numpy`` array of ``integers): Values of the order of the Bessel function, :math:`\ell`. This array has shape ``(M)``.
+* ``ell`` (1d ``numpy`` array of ``integers``): Values of the order of the Bessel function, :math:`\ell`. This array has shape ``(M)``.
 
-* ``diagonal`` (``True`` / ``False``): If ``M = N`` the code can be asked to only calculate the diagonal elements (``True``) of the ``(N,N)`` integrals.
+* ``diagonal`` (``True`` / ``False``): If ``M = N`` the code can be asked to only calculate the diagonal elements (``True``) of the ``(M,N)`` integrals.
 
 * ``result`` (2 or 1d ``numpy`` array): This array needs to be defined before with the correct shape as it is passed by reference. If ``diagonal == False`` it must have the shape ``(M,N)``. If ``diagonal == True`` it must have shape ``(N)``.
 
@@ -123,7 +123,7 @@ Calculates integrals of the type:
 
 .. math::
 
-   I(k_1, k_2,\ell_!,\ell_2) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) f(x) \mathrm{d}x
+   I(k_1, k_2,\ell_1,\ell_2) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) f(x) \mathrm{d}x
 
 where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``2`` or ``3``. Generally, if you have specified ``N`` integrands before, this function can be passed ``M`` variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
@@ -140,7 +140,7 @@ Calculates integrals of the type:
 
 .. math::
 
-   I(k_1, k_2, ,k_3, \ell_!,\ell_2, \ell_3) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) j_{\ell_3}(xk_3) f(x) \mathrm{d}x
+   I(k_1, k_2 ,k_3, \ell_1,\ell_2, \ell_3) = \int_a^b j_{\ell_1}(xk_1)j_{\ell_2}(xk_2) j_{\ell_3}(xk_3) f(x) \mathrm{d}x
 
 where :math:`f(x)` are the integrands and :math:`j_\ell(x)` can be spherical or cylindrical Bessel functions. ``type`` in ``levin`` needs to be set to ``4`` or ``5``. Generally, if you have specified ``N`` integrands before, this function can be passed ``M`` variables, so that
 in the end ``(M, N)`` integrals are calculated. For the specifics see ``result`` and ``diagonal``
@@ -148,15 +148,3 @@ in the end ``(M, N)`` integrals are calculated. For the specifics see ``result``
 **Arguments:**
 
 See the logic explained in ``levin_integrate_bessel_single``. ``ell_1``, ``k_1``, etc. must have the shapes as ``ell``, ``k`` above.
-
-
-
-**Stuff**
-
-.. automodule:: pylevin
-   :members:
-   :imported-members:
-   :show-inheritance:
-   :special-members:
-
-.. automodule:: pylevin.set_levin
