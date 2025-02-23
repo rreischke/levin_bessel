@@ -9,7 +9,7 @@ build:
 
 sphinx:
    builder: html
-   configuration: readthedocs/conf.py
+   configuration: docs/conf.py
   
 # Required
 version: 2
