@@ -34,7 +34,8 @@ In contrast to other implementations for highly oscillatory integrals, `pylevin`
 
 ![Top panel: Result of the integral, $I_2$, times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure1}](paper_plot_two_bessel.pdf)
 
-![Same as \autoref{fig:figure1} but for the integral, $I_3$ times $k^3$.  \label{fig:figure2}](paper_plot_three_bessel.pdf){width=50%}
+![Same as \autoref{fig:figure1} but for the integral, $I_3$ times $k^3$.  \label{fig:figure2}](paper_plot_three_bessel.pdf){width=49%}
+(paper_plot_two_bessel.pdf){width=49%}
 
 As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
 We use the following two integrals as an example:
