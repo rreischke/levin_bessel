@@ -5,6 +5,11 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "3.7"
+
+
+sphinx:
+   builder: html
+   configuration: readthedocs/conf.py
   
 # Required
 version: 2
