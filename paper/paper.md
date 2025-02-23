@@ -32,6 +32,11 @@ In contrast to other implementations for highly oscillatory integrals, `pylevin`
 
 
 # Examples
+
+![Top panel: Result of the integral, $I_2$, times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure1}](paper_plot_two_bessel.pdf)
+
+![Same as \autoref{fig:figure1} but for the integral, $I_3$ times $k^3$.  \label{fig:figure2}](paper_plot_three_bessel.pdf)
+
 As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
 We use the following two integrals as an example:
 
@@ -43,11 +48,6 @@ I_3 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)j_{15}(
 $$
 
 The result of $I_2$ is shown in \autoref{fig:figure1} and for $I_3$ in \autoref{fig:figure2}. In order for the quadrature to converge over an extended $k$-range, the number of maximum sub-intervals was increased to $10^3$ ($2\times 10^3$) for $I_2$ ($I_3$). The grey-shaded area indicates where the quadrature fails to reach convergence even after this change. 
-
-![Top panel: Result of the integral, $I_2$, times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure1}](paper_plot_two_bessel.pdf,paper_plot_three_bessel.pdf)
-
-![Top panel: Result of the integral, $I_3$ times $k^3$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure2}](paper_plot_three_bessel.pdf)
-
 It is therefore clear that `pylevin` is more accurate and around three to four orders of magnitudes faster than standard integration routines. 
 
 Additionally to this benchmark, `pylevin` was tested against some specialised methods estimating integrals including a single Bessel function such as Ogata's method @ogata_2005 with an implementation described in @murray_2019 or FFTLog-based methods [@hamilton_2000;@karamanis_2021;leonard_2023] and found excellent agreement in the results and runtimes within a factor of two of the other methods.
