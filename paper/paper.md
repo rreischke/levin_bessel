@@ -37,7 +37,7 @@ $$
 I_2 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)\;, 
 $$
 $$
-I_3 = & \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)j_{15}(kx)\;,
+I_3 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)j_{15}(kx)\;,
 $$
 
 The results are shown in \autoref{fig:figure}
