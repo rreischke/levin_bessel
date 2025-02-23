@@ -31,15 +31,18 @@ In contrast to other implementations for highly oscillatory integrals, `pylevin`
 
 
 As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
-We use the following integral as an example:
+We use the following two integrals as an example:
 
 $$
-\int_{1\times 10^{-5}}^{100}\mathrm{d}x (x^3 + x^2 + x) j_5(xk)j_{10}(xk)\,.
+I_2 = & \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)\;, \\
+I_3 = & \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)j_{15}(kx)\;,
 $$
 
 The results are shown in \autoref{fig:figure}
 
-![Top panel: Result of the integral times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure}](paper_plot_two_bessel.pdf)
+![Top panel: Result of the integral, $I_2$, times $k^2$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure}](paper_plot_two_bessel.pdf)
+
+![Top panel: Result of the integral, $I_3$ times $k^3$ to highlight the high frequency regime. The quadrature is shown in solid blue and `pylevin` in dashed red. The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. Bottom panel: relative difference between the two methods.  \label{fig:figure}](paper_plot_three_bessel.pdf)
 
 
 
