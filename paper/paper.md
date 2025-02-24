@@ -31,20 +31,40 @@ In contrast to other implementations for highly oscillatory integrals, `pylevin`
 
 
 # Examples
-The way `pylevin` works is that one first defines an integrand, $f(x)$, the integral type (spherical or cylindrical Bessel functions and $N$) and if the interpolation of the integrand should be carried out logarithmically
+The way `pylevin` works is that one first defines an integrand, $f(x)$, the integral type (spherical or cylindrical Bessel functions and $N$) and if the interpolation of the integrand should be carried: out logarithmically
 
 ```python
 x = np.geomspace(1e-5,100,100)
-f_of_x = x[:,None]**3 + (x**2 +x)
+f_of_x = x**3 + (x**2 +x)
 integral_type = 0 
 number_omp_threads = 1 
 interploate_logx = True
 interploate_logy = True
-lp_single = levin.pylevin(integral_type, x, f_of_x, logx, logy, number_omp_threads)
+lp_single = levin.pylevin(integral_type,
+                          x,
+                          f_of_x[:, None],
+                          logx,
+                          logy,
+                          number_omp_threads)
 ```
 
+Note that the broadcasting of `f_of_x`is required as one can in principle pass many different integrands at the same time and the code always expects this dimension. We can then define the values $k$ and $\ell$ at which we want to evaluate the integral which are all one-dimensional arrays of the same shape. Additionally, we also have to allocate the memory for the result which is stored in-place:
 
-As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
+```python
+k = np.geomspace(1e-3,1e4,1000)
+ell = (5*np.ones_like(k)).astype(int) 
+result_levin = np.zeros((len(k), 1)) 
+lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k),
+                                        x[-1]*np.ones_like(k),
+                                        k,
+                                        ell,
+                                        False,
+                                        result_levin)
+```
+
+If we would have passed more integrands before, the results must have the corresponding shape in the second dimension. For more detailed examples we refer to the example notebook on github and to the API.
+
+ We now demonstrate the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
 We use the following two integrals as an example:
 
 $$
