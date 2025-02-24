@@ -31,6 +31,19 @@ In contrast to other implementations for highly oscillatory integrals, `pylevin`
 
 
 # Examples
+The way `pylevin` works is that one first defines an integrand, $f(x)$, the integral type (spherical or cylindrical Bessel functions and $N$) and if the interpolation of the integrand should be carried out logarithmically
+
+```python
+x = np.geomspace(1e-5,100,100)
+f_of_x = x[:,None]**3 + (x**2 +x)
+integral_type = 0 
+number_omp_threads = 1 
+interploate_logx = True
+interploate_logy = True
+lp_single = levin.pylevin(integral_type, x, f_of_x, logx, logy, number_omp_threads)
+```
+
+
 As an example, we show the performance of `pylevin` on a single core on an Apple M3 and compare it to `scipy.integrate.quad`, an adaptive quadrature. The relative accuracy required for both methods is set to $10^{-3}$.
 We use the following two integrals as an example:
 
@@ -46,7 +59,7 @@ It is therefore clear that `pylevin` is more accurate and around three to four o
 
 ![Speed and accuracy comparison of `pylevin` (shown in dashed red) against a standard adaptive quadrature (shown in solid blue). The runtime for the two methods is given in the legend. For the adaptive quadrature the maximum number of sub-intervals was set to 1000 (default is 50). The grey shaded region indicates when the quadrature starts to fail. The bottom panel shows the relative difference between the two methods.   **Left**: Result of the integral $I_2$. **Right**: Result of the integral $I_3$.  \label{fig:figure1}](paper_plot_joss.pdf)
 
-Additionally to this benchmark, `pylevin` was tested against some specialised methods estimating integrals including a single Bessel function such as Ogata's method @ogata_2005 with an implementation described in @murray_2019 or FFTLog-based methods [@hamilton_2000;@karamanis_2021;leonard_2023] and found excellent agreement in the results and runtimes within a factor of two of the other methods.
+Additionally to this benchmark, `pylevin` was tested against some specialised methods estimating integrals including a single Bessel function such as Ogata's method @ogata_2005 with an implementation described in @murray_2019 or FFTLog-based methods [@hamilton_2000;@karamanis_2021;@leonard_2023] and found excellent agreement in the results and runtimes within a factor of two of the other methods.
 
 
 
