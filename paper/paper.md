@@ -8,11 +8,10 @@
     - name: Robert Reischke
       orcid: 0000-0001-5404-8753
       corresponding: true
-      affiliation: 1
   
   affiliations:
     - name: Argelander Institut fuer Astronomie
-    - index: 1
+
   date: 24 February 2025
   bibliography: paper.bib
 ---
