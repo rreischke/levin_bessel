@@ -1,5 +1,5 @@
 ---
-  title: 'pylevin: efficient numerical integration of integrals over products of up to three Bessel functions'
+  title: 'pylevin: efficient numerical integration of integrals containing up to three Bessel functions'
   tags:
     - Python
     - numerical integration
@@ -7,8 +7,8 @@
   authors:
    - name: Robert Reischke
      orcid: 0000-0001-5404-8753
-     affiliation: Argelander Institut für Astronomie
-  date: 23 February 2025
+     affiliation: Argelander Institut fuer Astronomie
+  date: 24 February 2025
   bibliography: paper.bib
 ---
 
