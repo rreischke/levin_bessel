@@ -6,12 +6,14 @@
     - oscillatory functions
   authors:
     - name: Robert Reischke
-      affiliation: Argelander Institut für Astronomie
+      affiliation: 1
       orcid: 0000-0001-5404-8753
       corresponding: true
   
   affiliations:
     - name: Argelander Institut fuer Astronomie
+      index: 1
+
 
   date: 24 February 2025
   bibliography: paper.bib
