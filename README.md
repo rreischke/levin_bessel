@@ -35,10 +35,19 @@ If this is the case just install it by typing
 ```shell
  conda install -c conda-forge gxx_linux-64
 ```
-and redo the ``pip`` installation.
+and redo the ``pip`` installation. 
+
+### Testing the installation
+You can run ``pytest` to test the installation.
 
 ## Tutorial: How to use the library
 There is a detailed documentation of the code on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/). For a tutorial, there is a detailed [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory
+
+## Contributing
+If you want other types of oscillatory integrals implemented in ``pylevin``, I am very happy to help navigating the code. Note that these integrals need to satisfy some kind recursion relation for their derivatives (Eq. 9 in the arxiv version of the paper). This relation can technically be numerical but requires very stable derivatives.
+
+## Reporting issues and support
+If you encounter any issue or need help with the code you can either open an issue directly on github, or drop me a mail to reischke@posteo.net.
 
 
 ## Citing pylevin

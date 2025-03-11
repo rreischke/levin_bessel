@@ -1,4 +1,5 @@
-/test/test_levin_compare_ccl.ipynb
+/tests/test_levin_compare_ccl.ipynb
+/tests/test_covariance.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -164,4 +165,3 @@ cython_debug/
 
 
 paper/paper_plot.ipynb
-test/
