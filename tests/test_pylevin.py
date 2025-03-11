@@ -27,3 +27,4 @@ def test_levin_integrate_bessel_single():
     result_levin = np.zeros((M, N)) #allocate the result
     lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
 
+test_levin_integrate_bessel_single()
