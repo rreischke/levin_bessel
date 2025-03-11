@@ -2,9 +2,11 @@
 #include <gsl/gsl_spline.h>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/chebyshev.hpp>
+#include <chrono>
 
-pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread)
+pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread, bool diagonal)
 {
+    is_diagonal = diagonal;
     if (integrand.size() != x.size())
     {
         throw std::range_error("support dimensions must match integrand dimensions");
@@ -46,15 +48,30 @@ pylevin::~pylevin()
     }
     if (system_of_equations_set)
     {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+        if (is_diagonal)
         {
-            for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
-                for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                for (uint i_bisec = 0; i_bisec < bisection[i_integrand].size() - 1; i_bisec++)
                 {
-                    gsl_matrix_free(LU_G_matrix[i_integrand][i_variable][i_bisec]);
-                    gsl_permutation_free(permutation[i_integrand][i_variable][i_bisec]);
+                    gsl_matrix_free(LU_G_matrix[i_integrand][i_bisec]);
+                    gsl_permutation_free(permutation[i_integrand][i_bisec]);
+                }
+            }
+        }
+        else
+        {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+            {
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                {
+                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
+                    {
+                        gsl_matrix_free(LU_G_matrix[i_integrand * size_variables + i_variable][i_bisec]);
+                        gsl_permutation_free(permutation[i_integrand * size_variables + i_variable][i_bisec]);
+                    }
                 }
             }
         }
@@ -100,18 +117,9 @@ void pylevin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double
     }
 }
 
-std::vector<std::vector<std::vector<double>>> pylevin::get_bisection()
-{
-    return bisection;
-}
-
 void pylevin::init_splines(std::vector<double> &x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy)
 {
     n_integrand = integrand[0].size();
-    if (!bisection_set)
-    {
-        bisection.resize(n_integrand, std::vector<std::vector<double>>());
-    }
     if (!system_of_equations_set && !bisection_set)
     {
         spline_integrand.resize(integrand[0].size(), std::vector<gsl_spline *>(N_thread_max));
@@ -922,9 +930,18 @@ void pylevin::solve_LSE_single(double A, double B, uint col, uint i_integrand, d
 
     if (bisection_set && !system_of_equations_set)
     {
-        gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_variable[tid]][index_bisection[tid]], &s);
-        gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_variable[tid]][index_bisection[tid]], matrix_G);
-        gsl_permutation_memcpy(P, permutation[i_integrand][index_variable[tid]][index_bisection[tid]]);
+        if (!is_diagonal)
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]]);
+        }
+        else
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand][index_bisection[tid]]);
+        }
         if (col == n_col)
         {
             gsl_linalg_LU_solve(matrix_G, P, F_stacked_set[tid], ce_set[tid]);
@@ -987,14 +1004,24 @@ void pylevin::solve_LSE_double(double A, double B, uint col, uint i_integrand, d
             }
         }
     }
+
     int s;
     gsl_permutation *P = gsl_permutation_alloc(d * col);
 
     if (bisection_set && !system_of_equations_set)
     {
-        gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_variable[tid]][index_bisection[tid]], &s);
-        gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_variable[tid]][index_bisection[tid]], matrix_G);
-        gsl_permutation_memcpy(P, permutation[i_integrand][index_variable[tid]][index_bisection[tid]]);
+        if (!is_diagonal)
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]]);
+        }
+        else
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand][index_bisection[tid]]);
+        }
         if (col == n_col)
         {
             gsl_linalg_LU_solve(matrix_G, P, F_stacked_set[tid], ce_set[tid]);
@@ -1062,9 +1089,18 @@ void pylevin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, d
 
     if (bisection_set && !system_of_equations_set)
     {
-        gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_variable[tid]][index_bisection[tid]], &s);
-        gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_variable[tid]][index_bisection[tid]], matrix_G);
-        gsl_permutation_memcpy(P, permutation[i_integrand][index_variable[tid]][index_bisection[tid]]);
+        if (!is_diagonal)
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]]);
+        }
+        else
+        {
+            gsl_linalg_LU_decomp(matrix_G, permutation[i_integrand][index_bisection[tid]], &s);
+            gsl_matrix_memcpy(LU_G_matrix[i_integrand][index_bisection[tid]], matrix_G);
+            gsl_permutation_memcpy(P, permutation[i_integrand][index_bisection[tid]]);
+        }
         if (col == n_col)
         {
             gsl_linalg_LU_solve(matrix_G, P, F_stacked_set[tid], ce_set[tid]);
@@ -1113,8 +1149,16 @@ double pylevin::integrate_single(double A, double B, uint col, uint i_integrand,
     {
         if (bisection_set && !system_of_equations_set)
         {
-            w_precomp[i_integrand][index_variable[tid]][index_bisection[tid]][i] = w_single_bessel(A, k, ell, i);
-            w_precomp[i_integrand][index_variable[tid]][index_bisection[tid] + 1][i] = w_single_bessel(B, k, ell, i);
+            if (is_diagonal)
+            {
+                w_precomp[i_integrand][index_bisection[tid]][i] = w_single_bessel(A, k, ell, i);
+                w_precomp[i_integrand][index_bisection[tid] + 1][i] = w_single_bessel(B, k, ell, i);
+            }
+            else
+            {
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]][i] = w_single_bessel(A, k, ell, i);
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid] + 1][i] = w_single_bessel(B, k, ell, i);
+            }
         }
         if (col == n_col)
         {
@@ -1141,8 +1185,16 @@ double pylevin::integrate_double(double A, double B, uint col, uint i_integrand,
     {
         if (bisection_set && !system_of_equations_set)
         {
-            w_precomp[i_integrand][index_variable[tid]][index_bisection[tid]][i] = w_double_bessel(A, k_1, k_2, ell_1, ell_2, i);
-            w_precomp[i_integrand][index_variable[tid]][index_bisection[tid] + 1][i] = w_double_bessel(B, k_1, k_2, ell_1, ell_2, i);
+            if (is_diagonal)
+            {
+                w_precomp[i_integrand][index_bisection[tid]][i] = w_double_bessel(A, k_1, k_2, ell_1, ell_2, i);
+                w_precomp[i_integrand][index_bisection[tid] + 1][i] = w_double_bessel(B, k_1, k_2, ell_1, ell_2, i);
+            }
+            else
+            {
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]][i] = w_double_bessel(A, k_1, k_2, ell_1, ell_2, i);
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid] + 1][i] = w_double_bessel(B, k_1, k_2, ell_1, ell_2, i);
+            }
         }
         if (col == n_col)
         {
@@ -1169,8 +1221,16 @@ double pylevin::integrate_triple(double A, double B, uint col, uint i_integrand,
     {
         if (bisection_set && !system_of_equations_set)
         {
-            w_precomp.at(i_integrand).at(index_variable.at(tid)).at(index_bisection.at(tid)).at(i) = w_triple_bessel(A, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
-            w_precomp.at(i_integrand).at(index_variable.at(tid)).at(index_bisection.at(tid) + 1).at(i) = w_triple_bessel(B, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
+            if (is_diagonal)
+            {
+                w_precomp[i_integrand][index_bisection[tid]][i] = w_triple_bessel(A, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
+                w_precomp[i_integrand][index_bisection[tid] + 1][i] = w_triple_bessel(B, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
+            }
+            else
+            {
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]][i] = w_triple_bessel(A, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
+                w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid] + 1][i] = w_triple_bessel(B, k_1, k_2, k_3, ell_1, ell_2, ell_3, i);
+            }
         }
         if (col == n_col)
         {
@@ -1192,7 +1252,14 @@ double pylevin::integrate_lse_set(double A, double B, uint i_integrand)
     {
         gsl_vector_set(F_stacked_set[tid], j, inhomogeneity(map_y_to_x(x_j_set[tid][j], A, B), i_integrand, tid));
     }
-    gsl_linalg_LU_solve(LU_G_matrix[i_integrand][index_variable[tid]][index_bisection[tid]], permutation[i_integrand][index_variable[tid]][index_bisection[tid]], F_stacked_set[tid], ce_set[tid]);
+    if (is_diagonal)
+    {
+        gsl_linalg_LU_solve(LU_G_matrix[i_integrand][index_bisection[tid]], permutation[i_integrand][index_bisection[tid]], F_stacked_set[tid], ce_set[tid]);
+    }
+    else
+    {
+        gsl_linalg_LU_solve(LU_G_matrix[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], permutation[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]], F_stacked_set[tid], ce_set[tid]);
+    }
     for (uint i = 0; i < d; i++)
     {
         double aux_a = 0;
@@ -1209,7 +1276,14 @@ double pylevin::integrate_lse_set(double A, double B, uint i_integrand)
             }
             aux_b += gsl_vector_get(ce_set[tid], i * n_col + m);
         }
-        result += aux_b * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid] + 1][i] - aux_a * w_precomp[i_integrand][index_variable[tid]][index_bisection[tid]][i];
+        if (is_diagonal)
+        {
+            result += aux_b * w_precomp[i_integrand][index_bisection[tid] + 1][i] - aux_a * w_precomp[i_integrand][index_bisection[tid]][i];
+        }
+        else
+        {
+            result += aux_b * w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid] + 1][i] - aux_a * w_precomp[i_integrand * size_variables + index_variable[tid]][index_bisection[tid]][i];
+        }
     }
     return (B - A) / 2 * result;
 }
@@ -1241,7 +1315,14 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
-                bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                if (is_diagonal)
+                {
+                    bisection[i_integrand].push_back(x_sub[j]);
+                }
+                else
+                {
+                    bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                }
             }
             return result;
         }
@@ -1258,7 +1339,14 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
                     std::cerr << "subintervals too narrow for further bisection for integrand " << i_integrand << " at k " << k << " and ell " << ell << std::endl;
                     for (uint j = 0; j < x_sub.size(); j++)
                     {
-                        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                        if (is_diagonal)
+                        {
+                            bisection[i_integrand].push_back(x_sub[j]);
+                        }
+                        else
+                        {
+                            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                        }
                     }
                     return result;
                 }
@@ -1293,7 +1381,14 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
     }
     for (uint j = 0; j < x_sub.size(); j++)
     {
-        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+        if (is_diagonal)
+        {
+            bisection[i_integrand].push_back(x_sub[j]);
+        }
+        else
+        {
+            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+        }
     }
     return result;
 }
@@ -1327,7 +1422,14 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
-                bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                if (is_diagonal)
+                {
+                    bisection[i_integrand].push_back(x_sub[j]);
+                }
+                else
+                {
+                    bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                }
             }
             return result;
         }
@@ -1344,7 +1446,14 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
                     std::cerr << "subintervals too narrow for further bisection for integrand " << i_integrand << " at k_1 " << k_1 << " at k_2 " << k_2 << " and ell_1 " << ell_1 << " and ell_2 " << ell_2 << std::endl;
                     for (uint j = 0; j < x_sub.size(); j++)
                     {
-                        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                        if (is_diagonal)
+                        {
+                            bisection[i_integrand].push_back(x_sub[j]);
+                        }
+                        else
+                        {
+                            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                        }
                     }
                     return result;
                 }
@@ -1379,7 +1488,14 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
     }
     for (uint j = 0; j < x_sub.size(); j++)
     {
-        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+        if (is_diagonal)
+        {
+            bisection[i_integrand].push_back(x_sub[j]);
+        }
+        else
+        {
+            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+        }
     }
     return result;
 }
@@ -1413,7 +1529,14 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
-                bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                if (is_diagonal)
+                {
+                    bisection[i_integrand].push_back(x_sub[j]);
+                }
+                else
+                {
+                    bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                }
             }
             return result;
         }
@@ -1430,7 +1553,14 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
                     std::cerr << "subintervals too narrow for further bisection for integrand " << i_integrand << " at k_1 " << k_1 << " at k_2 " << k_2 << " and ell_1 " << ell_1 << " and ell_2 " << ell_2 << std::endl;
                     for (uint j = 0; j < x_sub.size(); j++)
                     {
-                        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+                        if (is_diagonal)
+                        {
+                            bisection[i_integrand].push_back(x_sub[j]);
+                        }
+                        else
+                        {
+                            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+                        }
                     }
                     return result;
                 }
@@ -1465,7 +1595,14 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
     }
     for (uint j = 0; j < x_sub.size(); j++)
     {
-        bisection[i_integrand][index_variable[tid]].push_back(x_sub[j]);
+        if (is_diagonal)
+        {
+            bisection[i_integrand].push_back(x_sub[j]);
+        }
+        else
+        {
+            bisection[i_integrand * size_variables + index_variable[tid]].push_back(x_sub[j]);
+        }
     }
     return result;
 }
@@ -1488,13 +1625,61 @@ double pylevin::levin_integrate_triple_bessel(double x_min, double x_max, double
     return iterate_triple(x_min, x_max, n_col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3, n_sub, speak_to_me);
 }
 
-void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::allocate_variables_for_lse()
 {
+    if (is_diagonal)
+    {
+        LU_G_matrix.resize(n_integrand, std::vector<gsl_matrix *>());
+        permutation.resize(n_integrand, std::vector<gsl_permutation *>());
+        w_precomp.resize(n_integrand, std::vector<std::vector<double>>());
+        basis_precomp.resize(n_integrand, std::vector<std::vector<double>>());
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+        {
+            for (uint i_bisec = 0; i_bisec < bisection[i_integrand].size() - 1; i_bisec++)
+            {
+                LU_G_matrix[i_integrand].push_back(gsl_matrix_alloc(d * n_col, d * n_col));
+                permutation[i_integrand].push_back(gsl_permutation_alloc(d * n_col));
+                w_precomp[i_integrand].push_back(std::vector<double>(d, 0.0));
+                basis_precomp[i_integrand].push_back(std::vector<double>(2 * n_col, 1.0));
+            }
+            w_precomp[i_integrand].push_back(std::vector<double>(d, 0.0));
+            basis_precomp[i_integrand].push_back(std::vector<double>(2 * n_col, 1.0));
+        }
+    }
+    else
+    {
+        LU_G_matrix.resize(n_integrand * size_variables, std::vector<gsl_matrix *>());
+        permutation.resize(n_integrand * size_variables, std::vector<gsl_permutation *>());
+        w_precomp.resize(n_integrand * size_variables, std::vector<std::vector<double>>());
+        basis_precomp.resize(n_integrand * size_variables, std::vector<std::vector<double>>());
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+        {
+            for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+            {
+                for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
+                {
+                    LU_G_matrix[i_integrand * size_variables + i_variable].push_back(gsl_matrix_alloc(d * n_col, d * n_col));
+                    permutation[i_integrand * size_variables + i_variable].push_back(gsl_permutation_alloc(d * n_col));
+                    w_precomp[i_integrand * size_variables + i_variable].push_back(std::vector<double>(d, 0.0));
+                    basis_precomp[i_integrand * size_variables + i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
+                }
+                w_precomp[i_integrand * size_variables + i_variable].push_back(std::vector<double>(d, 0.0));
+                basis_precomp[i_integrand * size_variables + i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
+            }
+        }
+    }
+}
+
+void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, pybind11::array_t<double> &result)
+{
+    size_variables = x_max.size();
     if (d > 2)
     {
         throw std::range_error("You have chosen the wrong integral type to call this function, must be either 0 or 1");
     }
-    if (diagonal)
+    if (is_diagonal)
     {
         if (x_min.size() != n_integrand)
         {
@@ -1507,31 +1692,31 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
     }
     if (system_of_equations_set)
     {
-        if (x_min.size() < n_integrand)
+        if (size_variables < n_integrand)
         {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
                 index_integral[tid] = i_integrand;
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     index_variable[tid] = i_variable;
                     result.mutable_at(i_variable, i_integrand) = 0.;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                     }
                 }
             }
         }
         else
         {
-            if (!diagonal)
+            if (!is_diagonal)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
                     index_variable[tid] = i_variable;
@@ -1539,10 +1724,10 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
                     {
                         result.mutable_at(i_variable, i_integrand) = 0.;
                         index_integral[tid] = i_integrand;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                         }
                     }
                 }
@@ -1550,16 +1735,16 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             else
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_variable;
                     index_variable[tid] = i_variable;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_variable][i_variable].size() - 1; i_bisec++)
+                    for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
+                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], i_variable);
                     }
                 }
             }
@@ -1569,20 +1754,21 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
     {
         if (!bisection_set)
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+            if (is_diagonal)
             {
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    bisection[i_integrand].push_back(std::vector<double>());
-                }
+                bisection.resize(n_integrand, std::vector<double>());
             }
-            if (x_min.size() < n_integrand)
+            else
+            {
+                bisection.resize(n_integrand * size_variables, std::vector<double>());
+            }
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         index_variable[tid] = i_variable;
                         result.mutable_at(i_variable, i_integrand) = levin_integrate_single_bessel(x_min[i_variable], x_max[i_variable], k[i_variable], ell[i_variable], i_integrand);
@@ -1591,26 +1777,27 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        if (diagonal)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        result.mutable_at(i_variable) = levin_integrate_single_bessel(x_min[i_variable], x_max[i_variable], k[i_variable], ell[i_variable], i_variable);
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                         {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_integrand) = levin_integrate_single_bessel(x_min[i_variable], x_max[i_variable], k[i_variable], ell[i_variable], i_integrand);
-                                continue;
-                            }
+                            result.mutable_at(i_variable, i_integrand) = levin_integrate_single_bessel(x_min[i_variable], x_max[i_variable], k[i_variable], ell[i_variable], i_integrand);
                         }
-                        result.mutable_at(i_variable, i_integrand) = levin_integrate_single_bessel(x_min[i_variable], x_max[i_variable], k[i_variable], ell[i_variable], i_integrand);
                     }
                 }
             }
@@ -1618,51 +1805,26 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
         }
         else
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
-            {
-                LU_G_matrix.push_back(std::vector<std::vector<gsl_matrix *>>());
-                permutation.push_back(std::vector<std::vector<gsl_permutation *>>());
-                w_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                basis_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    LU_G_matrix[i_integrand].push_back(std::vector<gsl_matrix *>());
-                    permutation[i_integrand].push_back(std::vector<gsl_permutation *>());
-                    w_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    basis_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    if ((diagonal && i_variable == i_integrand) || !diagonal)
-                    {
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
-                        {
-                            LU_G_matrix[i_integrand][i_variable].push_back(gsl_matrix_alloc(d * n_col, d * n_col));
-                            permutation[i_integrand][i_variable].push_back(gsl_permutation_alloc(d * n_col));
-                            w_precomp[i_integrand][i_variable].push_back(std::vector<double>(2, 0.0));
-                            basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                        }
-                        w_precomp[i_integrand][i_variable].push_back(std::vector<double>(2, 0.0));
-                        basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                    }
-                }
-            }
-            if (x_min.size() < n_integrand)
+            allocate_variables_for_lse();
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_integrand;
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         result.mutable_at(i_variable, i_integrand) = 0.;
                         index_variable[tid] = i_variable;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_single(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k[i_variable], ell[i_variable]);
+                            result.mutable_at(i_variable, i_integrand) += integrate_single(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k[i_variable], ell[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
                             }
                         }
                     }
@@ -1670,62 +1832,65 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        index_integral[tid] = i_integrand;
-                        if (diagonal)
-                        {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable) = 0.;
-                            }
-                        }
-                        else
-                        {
-                            result.mutable_at(i_variable, i_integrand) = 0.;
-                        }
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        index_integral[tid] = i_variable;
+                        result.mutable_at(i_variable) = 0.;
+                        for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            if (diagonal)
-                            {
-                                result.mutable_at(i_variable) += integrate_single(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k[i_variable], ell[i_variable]);
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable, i_integrand) += integrate_single(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k[i_variable], ell[i_variable]);
-                            }
+                            result.mutable_at(i_variable) += integrate_single(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], n_col, i_variable, k[i_variable], ell[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_variable][i_bisec], i_col);
+                                basis_precomp[i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_variable][i_bisec + 1], i_col);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+                        {
+                            index_integral[tid] = i_integrand;
+                            result.mutable_at(i_variable, i_integrand) = 0.;
+                            for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
+                            {
+                                index_bisection[tid] = i_bisec;
+                                result.mutable_at(i_variable, i_integrand) += integrate_single(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k[i_variable], ell[i_variable]);
+                                for (uint i_col = 0; i_col < n_col; i_col++)
+                                {
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
+                                }
                             }
                         }
                     }
                 }
             }
             system_of_equations_set = true;
-            size_variables = x_max.size();
         }
     }
 }
 
-void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, pybind11::array_t<double> &result)
 {
+    size_variables = x_max.size();
     if (d == 8 || d == 2)
     {
         throw std::range_error("You have chosen the wrong integral type to call this function, must be either 2 or 3");
     }
-    if (diagonal)
+    if (is_diagonal)
     {
         if (x_min.size() != n_integrand)
         {
@@ -1738,42 +1903,42 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
     }
     if (system_of_equations_set)
     {
-        if (x_min.size() < n_integrand)
+        if (size_variables < n_integrand)
         {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
                 index_integral[tid] = i_integrand;
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
-                    result.mutable_at(i_variable, i_integrand) = 0.;
                     index_variable[tid] = i_variable;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                    result.mutable_at(i_variable, i_integrand) = 0.;
+                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                     }
                 }
             }
         }
         else
         {
-            if (!diagonal)
+            if (!is_diagonal)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
                     index_variable[tid] = i_variable;
                     for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                     {
-                        index_integral[tid] = i_integrand;
                         result.mutable_at(i_variable, i_integrand) = 0.;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        index_integral[tid] = i_integrand;
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                         }
                     }
                 }
@@ -1781,16 +1946,16 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             else
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_variable;
                     index_variable[tid] = i_variable;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_variable][i_variable].size() - 1; i_bisec++)
+                    for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
+                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], i_variable);
                     }
                 }
             }
@@ -1800,27 +1965,21 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
     {
         if (!bisection_set)
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+            if (is_diagonal)
             {
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    if (diagonal && i_variable != i_integrand)
-                    {
-                        bisection[i_integrand].push_back(std::vector<double>(2, 0.0));
-                    }
-                    else
-                    {
-                        bisection[i_integrand].push_back(std::vector<double>());
-                    }
-                }
+                bisection.resize(n_integrand, std::vector<double>());
             }
-            if (x_min.size() < n_integrand)
+            else
+            {
+                bisection.resize(n_integrand * size_variables, std::vector<double>());
+            }
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         index_variable[tid] = i_variable;
                         result.mutable_at(i_variable, i_integrand) = levin_integrate_double_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable], i_integrand);
@@ -1829,26 +1988,27 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        if (diagonal)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        result.mutable_at(i_variable) = levin_integrate_double_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable], i_variable);
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                         {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_integrand) = levin_integrate_double_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable], i_integrand);
-                                continue;
-                            }
+                            result.mutable_at(i_variable, i_integrand) = levin_integrate_double_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable], i_integrand);
                         }
-                        result.mutable_at(i_variable, i_integrand) = levin_integrate_double_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable], i_integrand);
                     }
                 }
             }
@@ -1856,48 +2016,26 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
         }
         else
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
-            {
-                LU_G_matrix.push_back(std::vector<std::vector<gsl_matrix *>>());
-                permutation.push_back(std::vector<std::vector<gsl_permutation *>>());
-                w_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                basis_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    LU_G_matrix[i_integrand].push_back(std::vector<gsl_matrix *>());
-                    permutation[i_integrand].push_back(std::vector<gsl_permutation *>());
-                    w_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    basis_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
-                    {
-                        LU_G_matrix[i_integrand][i_variable].push_back(gsl_matrix_alloc(d * n_col, d * n_col));
-                        permutation[i_integrand][i_variable].push_back(gsl_permutation_alloc(d * n_col));
-                        w_precomp[i_integrand][i_variable].push_back(std::vector<double>(4, 0.0));
-                        basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                    }
-                    w_precomp[i_integrand][i_variable].push_back(std::vector<double>(4, 0.0));
-                    basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                }
-            }
-            if (x_min.size() < n_integrand)
+            allocate_variables_for_lse();
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_integrand;
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         result.mutable_at(i_variable, i_integrand) = 0.;
                         index_variable[tid] = i_variable;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_double(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
+                            result.mutable_at(i_variable, i_integrand) += integrate_double(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
                             }
                         }
                     }
@@ -1905,62 +2043,65 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        index_integral[tid] = i_integrand;
-                        if (diagonal)
-                        {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable) = 0.;
-                            }
-                        }
-                        else
-                        {
-                            result.mutable_at(i_variable, i_integrand) = 0.;
-                        }
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        index_integral[tid] = i_variable;
+                        result.mutable_at(i_variable) = 0.;
+                        for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            if (diagonal)
-                            {
-                                result.mutable_at(i_variable) += integrate_double(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable, i_integrand) += integrate_double(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
-                            }
+                            result.mutable_at(i_variable) += integrate_double(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], n_col, i_variable, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_variable][i_bisec], i_col);
+                                basis_precomp[i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_variable][i_bisec + 1], i_col);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+                        {
+                            index_integral[tid] = i_integrand;
+                            result.mutable_at(i_variable, i_integrand) = 0.;
+                            for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
+                            {
+                                index_bisection[tid] = i_bisec;
+                                result.mutable_at(i_variable, i_integrand) += integrate_double(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], ell_1[i_variable], ell_2[i_variable]);
+                                for (uint i_col = 0; i_col < n_col; i_col++)
+                                {
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
+                                }
                             }
                         }
                     }
                 }
             }
             system_of_equations_set = true;
-            size_variables = x_max.size();
         }
     }
 }
 
-void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<double> k_3, std::vector<uint> ell_1, std::vector<uint> ell_2, std::vector<uint> ell_3, bool diagonal, pybind11::array_t<double> &result)
+void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<double> k_3, std::vector<uint> ell_1, std::vector<uint> ell_2, std::vector<uint> ell_3, pybind11::array_t<double> &result)
 {
+    size_variables = x_max.size();
     if (d != 8)
     {
         throw std::range_error("You have chosen the wrong integral type to call this function, must be either 4 or 5");
     }
-    if (diagonal)
+    if (is_diagonal)
     {
         if (x_min.size() != n_integrand)
         {
@@ -1973,42 +2114,42 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
     }
     if (system_of_equations_set)
     {
-        if (x_min.size() < n_integrand)
+        if (size_variables < n_integrand)
         {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
                 index_integral[tid] = i_integrand;
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     index_variable[tid] = i_variable;
                     result.mutable_at(i_variable, i_integrand) = 0.;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                        result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                     }
                 }
             }
         }
         else
         {
-            if (!diagonal)
+            if (!is_diagonal)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
                     index_variable[tid] = i_variable;
                     for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                     {
-                        index_integral[tid] = i_integrand;
                         result.mutable_at(i_variable, i_integrand) = 0.;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        index_integral[tid] = i_integrand;
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], i_integrand);
+                            result.mutable_at(i_variable, i_integrand) += integrate_lse_set(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_integrand);
                         }
                     }
                 }
@@ -2016,16 +2157,16 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             else
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_variable;
                     index_variable[tid] = i_variable;
-                    for (uint i_bisec = 0; i_bisec < bisection[i_variable][i_variable].size() - 1; i_bisec++)
+                    for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                     {
                         index_bisection[tid] = i_bisec;
-                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_variable][i_bisec], bisection[i_variable][i_variable][i_bisec + 1], i_variable);
+                        result.mutable_at(i_variable) += integrate_lse_set(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], i_variable);
                     }
                 }
             }
@@ -2035,27 +2176,21 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
     {
         if (!bisection_set)
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+            if (is_diagonal)
             {
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    if (diagonal && i_variable != i_integrand)
-                    {
-                        bisection[i_integrand].push_back(std::vector<double>(2, 0.0));
-                    }
-                    else
-                    {
-                        bisection[i_integrand].push_back(std::vector<double>());
-                    }
-                }
+                bisection.resize(n_integrand, std::vector<double>());
             }
-            if (x_min.size() < n_integrand)
+            else
+            {
+                bisection.resize(n_integrand * size_variables, std::vector<double>());
+            }
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         index_variable[tid] = i_variable;
                         result.mutable_at(i_variable, i_integrand) = levin_integrate_triple_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable], i_integrand);
@@ -2064,26 +2199,26 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        if (diagonal)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        result.mutable_at(i_variable) = levin_integrate_triple_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable], i_variable);
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                         {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_integrand) = levin_integrate_triple_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable], i_integrand);
-                                continue;
-                            }
+                            result.mutable_at(i_variable, i_integrand) = levin_integrate_triple_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable], i_integrand);
                         }
-                        result.mutable_at(i_variable, i_integrand) = levin_integrate_triple_bessel(x_min[i_variable], x_max[i_variable], k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable], i_integrand);
                     }
                 }
             }
@@ -2091,47 +2226,25 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
         }
         else
         {
-            for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
-            {
-                LU_G_matrix.push_back(std::vector<std::vector<gsl_matrix *>>());
-                permutation.push_back(std::vector<std::vector<gsl_permutation *>>());
-                w_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                basis_precomp.push_back(std::vector<std::vector<std::vector<double>>>());
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
-                {
-                    LU_G_matrix[i_integrand].push_back(std::vector<gsl_matrix *>());
-                    permutation[i_integrand].push_back(std::vector<gsl_permutation *>());
-                    w_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    basis_precomp[i_integrand].push_back(std::vector<std::vector<double>>());
-                    for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
-                    {
-                        LU_G_matrix[i_integrand][i_variable].push_back(gsl_matrix_alloc(d * n_col, d * n_col));
-                        permutation[i_integrand][i_variable].push_back(gsl_permutation_alloc(d * n_col));
-                        w_precomp[i_integrand][i_variable].push_back(std::vector<double>(d, 0.0));
-                        basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                    }
-                    w_precomp[i_integrand][i_variable].push_back(std::vector<double>(d, 0.0));
-                    basis_precomp[i_integrand][i_variable].push_back(std::vector<double>(2 * n_col, 1.0));
-                }
-            }
-            if (x_min.size() < n_integrand)
+            allocate_variables_for_lse();
+            if (size_variables < n_integrand)
             {
 #pragma omp parallel for num_threads(N_thread_max) schedule(auto)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
                     index_integral[tid] = i_integrand;
-                    for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         index_variable[tid] = i_variable;
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            result.mutable_at(i_variable, i_integrand) += integrate_triple(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
+                            result.mutable_at(i_variable, i_integrand) += integrate_triple(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
                             }
                         }
                     }
@@ -2139,51 +2252,53 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
-                for (uint i_variable = 0; i_variable < x_max.size(); i_variable++)
+                if (is_diagonal)
                 {
-                    uint tid = omp_get_thread_num();
-                    index_variable[tid] = i_variable;
-                    for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
-                        index_integral[tid] = i_integrand;
-                        if (diagonal)
-                        {
-                            if (i_integrand != i_variable)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable) = 0.;
-                            }
-                        }
-                        else
-                        {
-                            result.mutable_at(i_variable, i_integrand) = 0.;
-                        }
-                        for (uint i_bisec = 0; i_bisec < bisection[i_integrand][i_variable].size() - 1; i_bisec++)
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        index_integral[tid] = i_variable;
+                        result.mutable_at(i_variable) = 0.;
+                        for (uint i_bisec = 0; i_bisec < bisection[i_variable].size() - 1; i_bisec++)
                         {
                             index_bisection[tid] = i_bisec;
-                            if (diagonal)
-                            {
-                                result.mutable_at(i_variable) += integrate_triple(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
-                            }
-                            else
-                            {
-                                result.mutable_at(i_variable, i_integrand) += integrate_triple(bisection[i_integrand][i_variable][i_bisec], bisection[i_integrand][i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
-                            }
+                            result.mutable_at(i_variable) += integrate_triple(bisection[i_variable][i_bisec], bisection[i_variable][i_bisec + 1], n_col, i_variable, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
                             for (uint i_col = 0; i_col < n_col; i_col++)
                             {
-                                basis_precomp[i_integrand][i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec], i_col);
-                                basis_precomp[i_integrand][i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand][i_variable][i_bisec + 1], i_col);
+                                basis_precomp[i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_variable][i_bisec], i_col);
+                                basis_precomp[i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_variable][i_bisec + 1], i_col);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+                    for (uint i_variable = 0; i_variable < size_variables; i_variable++)
+                    {
+                        uint tid = omp_get_thread_num();
+                        index_variable[tid] = i_variable;
+                        for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
+                        {
+                            index_integral[tid] = i_integrand;
+                            result.mutable_at(i_variable, i_integrand) = 0.;
+                            for (uint i_bisec = 0; i_bisec < bisection[i_integrand * size_variables + i_variable].size() - 1; i_bisec++)
+                            {
+                                index_bisection[tid] = i_bisec;
+                                result.mutable_at(i_variable, i_integrand) += integrate_triple(bisection[i_integrand * size_variables + i_variable][i_bisec], bisection[i_integrand * size_variables + i_variable][i_bisec + 1], n_col, i_integrand, k_1[i_variable], k_2[i_variable], k_3[i_variable], ell_1[i_variable], ell_2[i_variable], ell_3[i_variable]);
+                                for (uint i_col = 0; i_col < n_col; i_col++)
+                                {
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec], i_col);
+                                    basis_precomp[i_integrand * size_variables + i_variable][i_bisec][n_col + i_col] = basis_function_cheby(bisection[i_integrand * size_variables + i_variable][i_bisec + 1], i_col);
+                                }
                             }
                         }
                     }
                 }
             }
             system_of_equations_set = true;
-            size_variables = x_max.size();
         }
     }
 }
