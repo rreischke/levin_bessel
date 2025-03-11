@@ -6,7 +6,7 @@ from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "1.0.5"
+__version__ = "1.1.0"
 
 
 if (sys.platform[:6] == "darwin"
@@ -46,6 +46,7 @@ setup(
     description="Implementing the Levin method to calculate integrals over product of up to three Bessel functions",
     long_description=long_description,
     long_description_content_type='text/markdown',
+    license_files = ('LICENSE.txt'),
     ext_modules=ext_modules,
     zip_safe=False,
     headers=['src/pylevin.h'],
