@@ -1,5 +1,8 @@
 /tests/test_levin_compare_ccl.ipynb
 /tests/test_covariance.ipynb
+/tests/test_covariance.py
+/tests/non_limber.py
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
