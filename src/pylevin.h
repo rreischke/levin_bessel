@@ -53,7 +53,7 @@ private:
 
   double min_interval = 0;
   double tol_rel = 1e-6;
-  double tol_abs = 0.;
+  double tol_abs = 0.0;
   uint maximum_number_subintervals = 32;
 
   gsl_error_handler_t *old_handler;
@@ -67,7 +67,7 @@ public:
 
   void init_splines(std::vector<double> &x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy);
 
-  void set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose);
+  void set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose, double tol_abs_in);
 
   void update_integrand(std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy);
 

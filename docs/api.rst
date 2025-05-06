@@ -44,7 +44,7 @@ and wether they should be interpolated logarithmically or not.
 
 
 
-``set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose)``
+``set_levin(n_col_in, maximum_number_bisections_in, relative_accuracy_in, super_accurate, verbose, tol_abs_in = 0.0)``
 '''''''''''
 
 Sets up the internal parameters of the Levin integrator. If not called, default values are used.
@@ -60,6 +60,8 @@ Sets up the internal parameters of the Levin integrator. If not called, default 
 * ``super_accurate`` (``True`` / ``False``): Should ``gsl`` (``False``)  or ``boost`` (``True``) be used for the computation of the Bessel functions. Especially at higher orders (larger than 100) of the Bessel functions ``gsl``can fail. **default: False**
 
 * ``verbose`` (``True`` / ``False``): Should the code talk to you? **default: False**
+
+* ``tol_abs_in`` (``float``): Absolute target accuracy at which the adaptive integration (the bisection) is stopped. **default: 0.0** 
 
 
 ``get_integrand(x)``

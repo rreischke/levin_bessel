@@ -2,7 +2,6 @@
 #include <gsl/gsl_spline.h>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/chebyshev.hpp>
-#include <chrono>
 
 pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread, bool diagonal)
 {
@@ -32,7 +31,7 @@ pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vec
     index_variable.resize(N_thread_max);
     index_integral.resize(N_thread_max);
     index_bisection.resize(N_thread_max);
-    set_levin(8, 32, 1e-4, false, false);
+    set_levin(8, 32, 1e-4, false, false, 0.0);
 }
 
 pylevin::~pylevin()
@@ -85,8 +84,9 @@ pylevin::~pylevin()
     }
 }
 
-void pylevin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose)
+void pylevin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double relative_accuracy_in, bool super_accurate_in, bool verbose, double tol_abs_in)
 {
+    tol_abs = tol_abs_in;
     n_col = (n_col_in + 1) / 2;
     n_col *= 2;
     maximum_number_subintervals = maximum_number_bisections_in;

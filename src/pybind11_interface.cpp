@@ -25,6 +25,7 @@ PYBIND11_MODULE(pylevin, m)
               "type"_a, "x"_a, "integrand"_a, "logx"_a, "logy"_a, "nthread"_a, py::arg("diagonal") = false)
          .def("set_levin", &pylevin::set_levin,
               "n_col_in"_a, "maximum_number_bisections_in"_a, "relative_accuracy_in"_a, "super_accurate"_a, "verbose"_a,
+              py::arg("tol_abs_in") = 0.0,
               py::call_guard<py::gil_scoped_release>(), R"mydelimiter(
     The foo function
 
