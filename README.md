@@ -38,11 +38,11 @@ If this is the case just install it by typing
 and redo the ``pip`` installation. 
 
 ### Testing the installation
-You can run ``pytest` to test the installation.
+You can run ``pytest`` to test the installation.
 
 
 ## Video-Tutorial: Cosmology from Home 2025 recording
-Feel free to watch 
+Feel free to watch my recording for Cosmology from Home 2025 on YouTube for a brief tutorial and a general explanation of the method and summary of the corresponding paper.
 [![my recording for Cosmology from Home 2025 on youtube](./docs/levin_talk.png)](https://www.youtube.com/watch?v=RcZVc6emnQU&t=2s)
 
 
