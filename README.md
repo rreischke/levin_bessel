@@ -43,7 +43,7 @@ You can run ``pytest` to test the installation.
 
 ## Video-Tutorial: Cosmology from Home 2025 recording
 Feel free to watch 
-[![my recording for Cosmology from Home 2025 on youtube](.docs/levin_talk.png)](https://www.youtube.com/watch?v=RcZVc6emnQU&t=2s)
+[![my recording for Cosmology from Home 2025 on youtube](./docs/levin_talk.png)](https://www.youtube.com/watch?v=RcZVc6emnQU&t=2s)
 
 
 ## Tutorial: How to use the library
