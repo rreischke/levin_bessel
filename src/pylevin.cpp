@@ -1297,12 +1297,12 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
     }
     double borders[2] = {A, B};
     std::vector<double> x_sub(borders, borders + 2);
-    double I_half = integrate_single(A, B, col / 2, i_integrand, k, ell);
+    double I_half = 0.0; // integrate_single(A, B, col / 2, i_integrand, k, ell);
     double I_full = integrate_single(A, B, col, i_integrand, k, ell);
     uint sub = 1;
     double previous = I_half;
     std::vector<double> approximations(1, I_full);
-    std::vector<double> error_estimates(1, fabs(I_full - I_half));
+    std::vector<double> error_estimates(1, pow(I_full - I_half, 2));
     double result = I_full;
     while (sub <= smax + 1)
     {
@@ -1311,7 +1311,7 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
         {
             result += approximations[i];
         }
-        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs))
+        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs) && (sqrt(accumulate(error_estimates.begin(), error_estimates.end(), 0.0)) <= GSL_MAX(tol_rel * abs(result), tol_abs)))
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
@@ -1364,11 +1364,11 @@ double pylevin::iterate_single(double A, double B, uint col, uint i_integrand, d
         I_half = integrate_single(x_subim1_i, x_subi_i, col / 2, i_integrand, k, ell);
         I_full = integrate_single(x_subim1_i, x_subi_i, col, i_integrand, k, ell);
         approximations[i - 1] = I_full;
-        error_estimates[i - 1] = fabs(I_full - I_half);
+        error_estimates[i - 1] = pow(I_full - I_half, 2);
         I_half = integrate_single(x_subi_i, x_subip1_i, col / 2, i_integrand, k, ell);
         I_full = integrate_single(x_subi_i, x_subip1_i, col, i_integrand, k, ell);
         approximations.insert(approximations.begin() + i, I_full);
-        error_estimates.insert(error_estimates.begin() + i, fabs(I_full - I_half));
+        error_estimates.insert(error_estimates.begin() + i, pow(I_full - I_half, 2));
     }
     if (verbose)
     {
@@ -1403,12 +1403,12 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
     }
     double borders[2] = {A, B};
     std::vector<double> x_sub(borders, borders + 2);
-    double I_half = integrate_double(A, B, col / 2, i_integrand, k_1, k_2, ell_1, ell_2);
+    double I_half = 0.0; // integrate_double(A, B, col / 2, i_integrand, k_1, k_2, ell_1, ell_2);
     double I_full = integrate_double(A, B, col, i_integrand, k_1, k_2, ell_1, ell_2);
     uint sub = 1;
     double previous = I_half;
     std::vector<double> approximations(1, I_full);
-    std::vector<double> error_estimates(1, fabs(I_full - I_half));
+    std::vector<double> error_estimates(1, pow(I_full - I_half, 2));
     double result = I_full;
     while (sub <= smax + 1)
     {
@@ -1418,7 +1418,7 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
             result += approximations[i];
         }
         intermediate_results.push_back(result);
-        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs))
+        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs) && (sqrt(accumulate(error_estimates.begin(), error_estimates.end(), 0.0)) <= GSL_MAX(tol_rel * abs(result), tol_abs)))
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
@@ -1471,11 +1471,11 @@ double pylevin::iterate_double(double A, double B, uint col, uint i_integrand, d
         I_half = integrate_double(x_subim1_i, x_subi_i, col / 2, i_integrand, k_1, k_2, ell_1, ell_2);
         I_full = integrate_double(x_subim1_i, x_subi_i, col, i_integrand, k_1, k_2, ell_1, ell_2);
         approximations[i - 1] = I_full;
-        error_estimates[i - 1] = fabs(I_full - I_half);
+        error_estimates[i - 1] = pow(I_full - I_half, 2);
         I_half = integrate_double(x_subi_i, x_subip1_i, col / 2, i_integrand, k_1, k_2, ell_1, ell_2);
         I_full = integrate_double(x_subi_i, x_subip1_i, col, i_integrand, k_1, k_2, ell_1, ell_2);
         approximations.insert(approximations.begin() + i, I_full);
-        error_estimates.insert(error_estimates.begin() + i, fabs(I_full - I_half));
+        error_estimates.insert(error_estimates.begin() + i, pow(I_full - I_half, 2));
     }
     if (verbose)
     {
@@ -1510,12 +1510,12 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
     }
     double borders[2] = {A, B};
     std::vector<double> x_sub(borders, borders + 2);
-    double I_half = integrate_triple(A, B, col / 2, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
+    double I_half = 0.0; // integrate_triple(A, B, col / 2, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
     double I_full = integrate_triple(A, B, col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
     uint sub = 1;
     double previous = I_half;
     std::vector<double> approximations(1, I_full);
-    std::vector<double> error_estimates(1, fabs(I_full - I_half));
+    std::vector<double> error_estimates(1, pow(I_full - I_half, 2));
     double result = I_full;
     while (sub <= smax + 1)
     {
@@ -1525,7 +1525,7 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
             result += approximations[i];
         }
         intermediate_results.push_back(result);
-        if (abs(result - previous) < GSL_MAX(tol_rel * abs(result), tol_abs))
+        if (abs(result - previous) <= GSL_MAX(tol_rel * abs(result), tol_abs) && (sqrt(accumulate(error_estimates.begin(), error_estimates.end(), 0.0)) <= GSL_MAX(tol_rel * abs(result), tol_abs)))
         {
             for (uint j = 0; j < x_sub.size(); j++)
             {
@@ -1578,11 +1578,11 @@ double pylevin::iterate_triple(double A, double B, uint col, uint i_integrand, d
         I_half = integrate_triple(x_subim1_i, x_subi_i, col / 2, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
         I_full = integrate_triple(x_subim1_i, x_subi_i, col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
         approximations[i - 1] = I_full;
-        error_estimates[i - 1] = fabs(I_full - I_half);
+        error_estimates[i - 1] = pow(I_full - I_half, 2);
         I_half = integrate_triple(x_subi_i, x_subip1_i, col / 2, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
         I_full = integrate_triple(x_subi_i, x_subip1_i, col, i_integrand, k_1, k_2, k_3, ell_1, ell_2, ell_3);
         approximations.insert(approximations.begin() + i, I_full);
-        error_estimates.insert(error_estimates.begin() + i, fabs(I_full - I_half));
+        error_estimates.insert(error_estimates.begin() + i, pow(I_full - I_half, 2));
     }
     if (verbose)
     {
