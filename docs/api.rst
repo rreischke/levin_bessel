@@ -81,7 +81,8 @@ Calculates the all integrands passed to Levin (see ``levin``).
 ``update_integrand(x, integrand, logx, logy)``
 '''''''''''
 
-Updates the integrand.
+Updates the integrand. CAVEAT: Only update the integrand if you DO NOT change anything in the oscillatory part of the integral, i.e. any argument of the Bessel function or the integration boundaries.
+In the latter case you have to create a new instance of the class as ``levin`` will otherwise use precomputed quantities for previous settings (see also the tutorial for more details on this).
 
 **Arguments:**
 

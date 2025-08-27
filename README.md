@@ -1,6 +1,7 @@
 This library implements Levin's method for integrals containing products of up to three spherical or cylindrical Bessel functions.
 
 ## Installation
+The installation has been tested on linux-based systems as well as Mac OS. For windows users, one would need to modify the ``setupy.py`` file accordingly. 
 ### With pip
 The library is available via PyPi installation, so you can just install it using 
 ```shell
