@@ -82,6 +82,7 @@ Calculates the all integrands passed to Levin (see ``levin``).
 '''''''''''
 
 Updates the integrand. CAVEAT: Only update the integrand if you DO NOT change anything in the oscillatory part of the integral, i.e. any argument of the Bessel function or the integration boundaries.
+In other words, DO NOT use ``update_integrand`` if you change any of the following variables: ``x_min``, ``x_max``, ``k`` or ``ell``. This applies as well when calculating integrals over products of Bessel functions.
 In the latter case you have to create a new instance of the class as ``levin`` will otherwise use precomputed quantities for previous settings (see also the tutorial for more details on this).
 
 **Arguments:**
