@@ -167,4 +167,4 @@ cython_debug/
 #.idea/
 
 
-paper/paper_plot.ipynb
+paper/test.py

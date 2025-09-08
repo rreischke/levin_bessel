@@ -26,5 +26,15 @@ def test_levin_integrate_bessel_single():
     ell = (5*np.ones_like(k)).astype(int) #order of the Bessel function, needs to be an integer
     result_levin = np.zeros((M, N)) #allocate the result
     lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
+    f_of_x = x[:,None]**(2*y[None,:]) + (x**1.1 +x)[:, None] #define integrands f(x) 
+
+    lp_single.update_integrand(x,f_of_x, logx, logy)
+    lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
+
+    f_of_x = x[:,None]**(2.1*y[None,:]) + (x**1.2 +x)[:, None] #define integrands f(x) 
+    lp_single.update_integrand(x,f_of_x, logx, logy)
+    lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
+
+
 
 test_levin_integrate_bessel_single()
