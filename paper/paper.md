@@ -106,7 +106,6 @@ $$
 \xi_0(s) =\int_0^\infty\left(b^2+fb/3 +f^2/5\right)P_\mathrm{lin}(k)J_0(ks) k^2\;\mathrm{d}k\;,
 $$
 
-where $b$ is the galaxy bias, $f$ the logarithmic growth rate and $P_\mathrm{lin}(k)$ is the linear matter power spectrum, which is calculated using `camb` [@lewis_efficient_2000;@lewis_cosmological_2002;@howlett_cmb_2012] at six redshifts. Since `hankl` is FFT based, it requires $k$ to be discretised, the FFT-dual will then be calculated at the inverse grid points. For this comparison, we use $2^{10}$ logarithmically-spaced points between $k=10^{-4}$ and $k = 1$ for the transformation to converge. 
 
 ![Comparison of `pylevin` with two methods to calculate a Hankel transformation. Dashed red is `pylevin` while solid blue is the alternative method. **Left**: Integral$(k)$ evaluated with the Ogata method using the `hankel` package. **Right**: Integral for the galaxy power spectrum monopole evaluated using the **hankl** package. Different lines refer to different redshifts.  \label{fig:figure2}](paper_plot_2_joss.pdf)
 
