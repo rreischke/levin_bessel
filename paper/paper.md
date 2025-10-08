@@ -112,4 +112,28 @@ The results are shown on the right of \autoref{fig:figure2} and good agreement c
 ![Comparison of `pylevin` with two methods to calculate a Hankel transformation. Dashed red is `pylevin` while solid blue is the alternative method. **Left**: Integral$(k)$ evaluated with the Ogata method using the `hankel` package. **Right**: Integral for the galaxy power spectrum monopole evaluated using the **hankl** package. Different lines refer to different redshifts.  \label{fig:figure2}](paper_plot_2_joss.pdf)
 
 
+## pyfftlog
+
+For `pyfftlog` (@hamilton_2000), we use the following transformation:
+
+$$
+\mathrm{FT}(k) = \int_0^\infty r^{5}\mathrm{e}^{-r^2/2}J_4(kr)\;\mathrm{d}r\;.
+$$
+
+For `pyfftlog`, $2^8$ logarithmically-spaced points between $10^{-4}$ and $10^4$ for $r$ and hence also for $k$. `pylevin` is evaluated for the same number of points, this value could, however, be reduced due to the featureless transformation, thus increasing the speed. In the left panel of \autoref{fig:figure3}, the result of this exercise is shown. Good agreement between the two methods is found, with both taken the same amount of time. The large relative error at large values of $k$ is due to the small value of the integral, and hence purely numerical noise.
+
+## pyCCL
+
+Here, we compare the implementation of the non-Limber projection for the angular power spectrum:
+
+$$
+C_\ell = \frac{2}{\pi}\int\mathrm{d}{\chi_1} W(\chi_1)\int\mathrm{d}{\chi_2} W(\chi_2)\int k^2\mathrm{d}k\;  P_{\mathrm{m}}(k, \chi_1,\chi_2)
+j_{\ell}(k\chi_1)j_{\ell}(k\chi_2) \;,
+$$
+
+for $W$, we assume a Gaussian shell in redshift with width $\sigma_z = 0.01$ centred at $z = 0.6$, $\chi(z)$ is the comoving distance. The matter power spectrum, $P_{\mathrm{m}}$, is again calculated with `camb`. The results from `pylevin` is compared to `CCL` \citep{chisari_core_2019} which implements an FFTLog algorithm \citep{fang_2020, leonard_2023}. This implementation first solves the two integrals over $\chi_{1,2}$ using FFTLog and then carries out the remaining integral over $k$ and assumes that the $k$ and $\chi_{1,2}$ dependence in the matter power spectrum is separable. To be consistent, we follow the same approach and solve the $\chi_{1,2}$ integration using `pylevin` and then calculate the remaining $k$ integration with the composite Simpson's rule implemented in `scipy`. The right side of \autoref{fig:ccl} shows that the two methods agree very well with each other and that the method implemented in `CCL` is about a factor of 2 faster. If the power spectrum, however, would not be separable on small $k$, as it can be the case in modified gravity scenarios, the `CCL` method would need to split the integral up into sub-intervals where the separability holds, slowing down the computation by a factor equal to the number of sub-intervals. This assumption is not done in `pylevin`. 
+
+
+![Comparison of `pylevin` with two other methods, the colour scheme is the same as in \Cref{fig:hankel}. **Left**: Transformation defined in $\mathrm{FT}(k)$ with the `pyfftlog` package. **Right**: angular power spectra, $C(\ell)$ computed with `pyCCL`. We show the relative difference between the two methods in the lower panel.  \label{fig:figure3}](paper_plot_3_joss.pdf)
+
 # References
