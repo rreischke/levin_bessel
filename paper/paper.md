@@ -42,7 +42,7 @@ The way `pylevin` works is that one first defines an integrand, $f(x)$, the inte
 
 ```python
 x = np.geomspace(1e-5,100,100)
-f_of_x = x**3 + (x**2 +x)
+f_of_x = x**3 + (x**2 + x)
 integral_type = 0 
 number_omp_threads = 1 
 interploate_logx = True
@@ -55,7 +55,7 @@ lp_single = levin.pylevin(integral_type,
                           number_omp_threads)
 ```
 
-Note that the broadcasting of `f_of_x`is required as one can, in principle, pass many different integrands at the same time, and the code always expects this dimension. We can then define the values $k$ and $\ell$ at which we want to evaluate the integral, which are all one-dimensional arrays of the same shape. Additionally, we also have to allocate the memory for the result, which is stored in-place:
+Note that the broadcasting of `f_of_x` is required as one can, in principle, pass many different integrands at the same time, and the code always expects this dimension. We can then define the values $k$ and $\ell$ at which we want to evaluate the integral, which are all one-dimensional arrays of the same shape. Additionally, we also have to allocate the memory for the result, which is stored in-place:
 
 ```python
 k = np.geomspace(1e-3,1e4,1000)
@@ -75,10 +75,10 @@ If we had passed more integrands before, the results must have the corresponding
 We use the following two integrals as an example:
 
 $$
-I_2 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)\;, 
+I_2 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 + x^2 + x)j_{10}(kx)j_5(kx)\;, 
 $$
 $$
-I_3 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 +x^2 +x)j_{10}(kx)j_5(kx)j_{15}(kx)\;,
+I_3 = \;\int_{10^{-5}}^{100} \mathrm{d}x \;(x^3 + x^2 + x)j_{10}(kx)j_5(kx)j_{15}(kx)\;,
 $$
 
 The result of $I_2$ is shown on the left and for $I_3$ on the right in \autoref{fig:figure1}. In order for the quadrature to converge over an extended $k$-range, the number of maximum sub-intervals was increased to $10^3$ ($2\times 10^3$) for $I_2$ ($I_3$). The grey-shaded area indicates where the quadrature fails to reach convergence even after this change. 
@@ -97,7 +97,7 @@ $$
 \mathrm{integral}(k) = \int_0^\infty\frac{x^2}{x^2+1}J_0(kx)\;\mathrm{d}x\;,
 $$
 
-for 500 values of $k$ logarithmically-spaced between 1 and $10^4$. The result is depicted on the left side of \autoref{fig:figure2}. It can be seen that both methods agree very well and are roughly equally fast. While the Hankel transformation formally extends from 0 to infinity, $ a = 10^ {-5}$ and $b = 10^8$ were used for `pylevin`. This choice of course depends on the specific integrand. 
+for 500 values of $k$ logarithmically-spaced between 1 and $10^4$. The result is depicted on the left side of \autoref{fig:figure2}. It can be seen that both methods agree very well and are roughly equally fast. While the Hankel transformation formally extends from 0 to infinity, $ a = 10^{-5}$ and $b = 10^8$ were used for `pylevin`. This choice of course depends on the specific integrand. 
 
 ## `hankl`
 Here, we follow the cosmology example provided in the `hankl` documentation (@karamanis_2021) to compute the monopole of the galaxy power spectrum:
@@ -120,7 +120,7 @@ $$
 \mathrm{FT}(k) = \int_0^\infty r^{5}\mathrm{e}^{-r^2/2}J_4(kr)\;\mathrm{d}r\;.
 $$
 
-For `pyfftlog`, $2^8$ logarithmically-spaced points between $10^{-4}$ and $10^4$ for $r$ and hence also for $ k$. `pylevin` is evaluated for the same number of points; this value could, however, be reduced due to the featureless transformation, thus increasing the speed. In the left panel of \autoref{fig:figure3}, the result of this exercise is shown. Good agreement between the two methods is found, with both taking the same amount of time. The large relative error at large values of $k$ is due to the small value of the integral, and hence purely numerical noise.
+For `pyfftlog`, $2^8$ logarithmically-spaced points between $10^{-4}$ and $10^4$ for $r$ and hence also for $k$. `pylevin` is evaluated for the same number of points; this value could, however, be reduced due to the featureless transformation, thus increasing the speed. In the left panel of \autoref{fig:figure3}, the result of this exercise is shown. Good agreement between the two methods is found, with both taking the same amount of time. The large relative error at large values of $k$ is due to the small value of the integral, and hence purely numerical noise.
 
 ## pyCCL
 
@@ -131,7 +131,9 @@ C_\ell = \frac{2}{\pi}\int\mathrm{d}{\chi_1} W(\chi_1)\int\mathrm{d}{\chi_2} W(\
 j_{\ell}(k\chi_1)j_{\ell}(k\chi_2) \;,
 $$
 
-for $W$, we assume a Gaussian shell in redshift with width $\sigma_z = 0.01$ centred at $z = 0.6$, $\chi(z)$ is the comoving distance. The matter power spectrum, $P_{\mathrm{m}}$, is again calculated with `camb`. The results from `pylevin` is compared to `CCL` (@chisari_core_2019) which implements an FFTLog algorithm [@fang_2020;@leonard_2023]. This implementation first solves the two integrals over $\chi_{1,2}$ using FFTLog and then carries out the remaining integral over $k$ and assumes that the $k$ and $\chi_{1,2}$ dependence in the matter power spectrum is separable. To be consistent, we follow the same approach and solve the $\chi_{1,2}$ integration using `pylevin` and then calculate the remaining $k$ integration with the composite Simpson's rule implemented in `scipy`. The right side of \autoref{fig:figure3} shows that the two methods agree very well with each other and that the method implemented in `CCL` is about a factor of 2 faster. If the power spectrum, however, would not be separable on small $k$, as it can be the case in modified gravity scenarios, the `CCL` method would need to split the integral up into sub-intervals where the separability holds, slowing down the computation by a factor equal to the number of sub-intervals. This assumption is not done in `pylevin`. 
+for $W$, we assume a Gaussian shell in redshift with width $\sigma_z = 0.01$ centred at $z = 0.6$, $\chi(z)$ is the comoving distance. The matter power spectrum, $P_{\mathrm{m}}$, is again calculated with `camb`. The results from `pylevin` are compared to `CCL` (@chisari_core_2019), which implements an FFTLog algorithm [@fang_2020;@leonard_2023]. This implementation first solves the two integrals over $\chi_{1,2}$ using FFTLog and then carries out the remaining integral over $k$ and assumes that the $k$ and $\chi_{1,2}$ dependence in the matter power spectrum is separable. To be consistent, we follow the same approach: we first integrate the $\chi_{1,2}$ using `pylevin`, then calculate the remaining $k$ integration using the composite Simpson's rule implemented in `scipy`. The right side of \autoref{fig:figure3} shows that the two methods agree very well with each other and that the method implemented in `CCL` is about a factor of 2 faster. If the power spectrum, however, were not separable on small $k$, as it can be the case in modified gravity scenarios, the `CCL` method would need to split the integral up into sub-intervals where the separability holds, slowing down the computation by a factor equal to the number of sub-intervals. This assumption is not done in `pylevin`. 
+
+
 
 
 ![Comparison of `pylevin` with two other methods, the colour scheme is the same as in \autoref{fig:figure2}. **Left**: Transformation defined in $\mathrm{FT}(k)$ with the `pyfftlog` package. **Right**: angular power spectra, $C(\ell)$ computed with `pyCCL`. We show the relative difference between the two methods in the lower panel.  \label{fig:figure3}](paper_plot_3_joss.pdf)
