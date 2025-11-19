@@ -138,4 +138,8 @@ for $W$, we assume a Gaussian shell in redshift with width $\sigma_z = 0.01$ cen
 
 ![Comparison of `pylevin` with two other methods, the colour scheme is the same as in \autoref{fig:figure2}. **Left**: Transformation defined in $\mathrm{FT}(k)$ with the `pyfftlog` package. **Right**: angular power spectra, $C(\ell)$ computed with `pyCCL`. We show the relative difference between the two methods in the lower panel.  \label{fig:figure3}](paper_plot_3_joss.pdf)
 
+# Acknowledgements
+
+I would like to thank Andrina Nicola and Paul Rogozenski for their help fixing issues with the CCL non-Limber comparison.
+
 # References
