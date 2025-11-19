@@ -11,7 +11,7 @@
       corresponding: true
   
   affiliations:
-    - name: Argelander Institut fuer Astronomie
+    - name: Argelander Institut fuer Astronomie, Germany
       index: 1
 
 
@@ -26,10 +26,10 @@ $$
 I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3) = \int_{a}^{b} \mathrm{d}x\,f(x) \prod_{i=1}^N \mathcal{J}_{\ell_i}(k_ix)\,,\quad N= 1,2,3\,,
 $$
 
-here $\mathcal{J}_\ell(x)$ denotes a spherical or cylindrical Bessel function of order $\ell$ and $f(x)$ can be any non-oscillatory function, i.e., with frequencies much lower than the one of the product of Bessel functions.
+where $\mathcal{J}_\ell(x)$ denotes a spherical or cylindrical Bessel function of order $\ell$ and $f(x)$ can be any non-oscillatory function, i.e., with frequencies much lower than the one of the product of Bessel functions.
 
 # Statement of need
-Typical approaches for numerically estimating integrals over highly oscillatory integrands are based on Fast Fourier Transforms (FFTLog) [@schoneberg_2018;@grasshorn_2018;@fang_2020] and asymptotic expansions [@levin_1996;@iserles_efficient_2005]. In `pylevin`, we implement one of the former methods, in particular, the adaptive Levin collocation [@levin_1996;@chen_2022;@leonard_2023]. Extending and improving the work done in @zieser_2016, `pylevin` can solve integrals of the type $I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3)$ (see summary). 
+Typical approaches for numerically estimating integrals over highly oscillatory integrands are based on Fast Fourier Transforms (FFTLog) [@schoneberg_2018;@grasshorn_2018;@fang_2020] and asymptotic expansions [@levin_1996;@iserles_efficient_2005]. In `pylevin`, we implement one of the former methods, specifically, the adaptive Levin collocation [@levin_1996;@chen_2022;@leonard_2023]. Extending and improving the work done in @zieser_2016, `pylevin` can solve integrals of the type $I_{\ell_1\ell_2\ell_3}(k_1,k_2,k_3)$ (see summary). 
 
  The main code is implemented in `C++` and wrapped into `python` using `pybind`. Due to the way `pylevin` implements Levin's method, it makes extensive use of precomputed quantities, allowing the function $f(x)$ to be updated and making successive calls to the integration routine an order of magnitude faster than the first. An aspect that is particularly important for situations where the same type of integral needs to be evaluated many times for slightly different $f(x)$. This is, for example, the case in inference when running Markov Chain Monte-Carlo.
 
@@ -55,7 +55,7 @@ lp_single = levin.pylevin(integral_type,
                           number_omp_threads)
 ```
 
-Note that the broadcasting of `f_of_x` is required as one can, in principle, pass many different integrands at the same time, and the code always expects this dimension. We can then define the values $k$ and $\ell$ at which we want to evaluate the integral, which are all one-dimensional arrays of the same shape. Additionally, we also have to allocate the memory for the result, which is stored in-place:
+Note that the broadcasting of `f_of_x` is required, as one can, in principle, pass many different integrands at the same time, and the code always expects this dimension. We can then define the values $k$ and $\ell$ at which we want to evaluate the integral, which are all one-dimensional arrays of the same shape. Additionally, we also have to allocate the memory for the result, which is stored in-place:
 
 ```python
 k = np.geomspace(1e-3,1e4,1000)
