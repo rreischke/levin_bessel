@@ -24,17 +24,23 @@ class pylevin
 {
 private:
   std::vector<std::vector<gsl_interp_accel *>> acc_integrand;
-  std::vector<std::vector<gsl_spline *>> spline_integrand;
+  std::vector<gsl_spline *> spline_integrand;
   std::vector<bool> is_y_log;
   std::vector<uint> index_variable, index_integral, index_bisection;
   std::vector<std::vector<double>> bisection;
   std::vector<std::vector<gsl_matrix *>> LU_G_matrix;
   std::vector<std::vector<gsl_permutation *>> permutation;
-  std::vector<std::vector<std::vector<double>>> basis_precomp;
   std::vector<std::vector<std::vector<double>>> w_precomp;
   std::vector<gsl_vector *> F_stacked_set, F_stacked_set_half;
   std::vector<gsl_vector *> ce_set, ce_set_half;
+  std::vector<gsl_matrix *> matrix_G_set, matrix_G_set_half;
+  std::vector<gsl_permutation *> P_set, P_set_half;
   std::vector<std::vector<double>> x_j_set, x_j_set_half;
+  // per-thread scratch buffers (avoid heap allocation in hot paths)
+  std::vector<std::vector<double>> A_mat_set;            // d*d per thread
+  std::vector<std::vector<double>> basis_vals_set;       // n_col per thread
+  std::vector<std::vector<double>> basis_prime_vals_set; // n_col per thread
+  std::vector<std::vector<double>> wA_set, wB_set;       // d per thread
 
   bool is_diagonal = false;
   bool is_x_log = false;
@@ -49,7 +55,6 @@ private:
   bool super_accurate = false;
   bool log_integration;
   bool error;
-  double ratio_cquad_qag_time;
 
   double min_interval = 0;
   double tol_rel = 1e-6;
@@ -58,7 +63,8 @@ private:
 
   gsl_error_handler_t *old_handler;
 
-  void set_pointer();
+  void fill_w_double(double x, double k_1, double k_2, uint ell_1, uint ell_2, double *w);
+  void fill_w_triple(double x, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, double *w);
 
 public:
   pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread, bool diagonal = false);
@@ -124,7 +130,7 @@ public:
   double levin_integrate_triple_bessel(double x_min, double x_max, double k_1, double k_2, double k_3, uint ell_1, uint ell_2, uint ell_3, uint i_integrand);
 
   void allocate_variables_for_lse();
-  
+
   void levin_integrate_bessel_single(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k, std::vector<uint> ell, pybind11::array_t<double> &result);
 
   void levin_integrate_bessel_double(std::vector<double> x_min, std::vector<double> x_max, std::vector<double> k_1, std::vector<double> k_2, std::vector<uint> ell_1, std::vector<uint> ell_2, pybind11::array_t<double> &result);

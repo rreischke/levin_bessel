@@ -2,7 +2,6 @@ import pylevin as levin
 import numpy as np
 import pytest
 
-
 def test_levin_integrate_bessel_single():
     x_length = 100
     N = 2
@@ -10,7 +9,7 @@ def test_levin_integrate_bessel_single():
     y = np.linspace(1,2, N) 
     f_of_x = x[:,None]**(3*y[None,:]) + (x**2 +x)[:, None] #define integrands f(x) 
     integral_type = 0 
-    N_thread = 1 # Number of threads used for hyperthreading
+    N_thread = 4 # Number of threads used for hyperthreading
     logx = True # Tells the code to create a logarithmic spline in x for f(x)
     logy = True # Tells the code to create a logarithmic spline in y for y = f(x)
     lp_single = levin.pylevin(integral_type, x, f_of_x, logx, logy, N_thread) #Constructor of the class
@@ -34,7 +33,5 @@ def test_levin_integrate_bessel_single():
     f_of_x = x[:,None]**(2.1*y[None,:]) + (x**1.2 +x)[:, None] #define integrands f(x) 
     lp_single.update_integrand(x,f_of_x, logx, logy)
     lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
-
-
 
 test_levin_integrate_bessel_single()
