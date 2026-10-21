@@ -3,6 +3,32 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/chebyshev.hpp>
 
+namespace
+{
+void fill_chebyshev_basis(double x, uint col, double *values, double *derivatives)
+{
+    if (col == 0)
+    {
+        return;
+    }
+
+    values[0] = 1.0;
+    derivatives[0] = 0.0;
+    if (col == 1)
+    {
+        return;
+    }
+
+    values[1] = x;
+    derivatives[1] = 1.0;
+    for (uint m = 2; m < col; ++m)
+    {
+        values[m] = 2.0 * x * values[m - 1] - values[m - 2];
+        derivatives[m] = 2.0 * values[m - 1] + 2.0 * x * derivatives[m - 1] - derivatives[m - 2];
+    }
+}
+}
+
 pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vector<double>> &integrand, bool logx, bool logy, uint nthread, bool diagonal)
 {
     is_diagonal = diagonal;
@@ -36,7 +62,7 @@ pylevin::pylevin(uint type_in, std::vector<double> x, const std::vector<std::vec
 
 pylevin::~pylevin()
 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
     for (uint i = 0; i < n_integrand; i++)
     {
         gsl_spline_free(spline_integrand[i]);
@@ -49,7 +75,7 @@ pylevin::~pylevin()
     {
         if (is_diagonal)
         {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 for (uint i_bisec = 0; i_bisec < bisection[i_integrand].size() - 1; i_bisec++)
@@ -61,7 +87,7 @@ pylevin::~pylevin()
         }
         else
         {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
@@ -128,11 +154,13 @@ void pylevin::set_levin(uint n_col_in, uint maximum_number_bisections_in, double
     x_j_set.resize(N_thread_max, std::vector<double>(n_col));
     x_j_set_half.resize(N_thread_max, std::vector<double>(n_col / 2));
     A_mat_set.assign(N_thread_max, std::vector<double>(d * d));
-    basis_vals_set.assign(N_thread_max, std::vector<double>(n_col));
-    basis_prime_vals_set.assign(N_thread_max, std::vector<double>(n_col));
+    basis_vals_set.assign(N_thread_max, std::vector<double>(n_col * n_col));
+    basis_prime_vals_set.assign(N_thread_max, std::vector<double>(n_col * n_col));
+    basis_vals_half_set.assign(N_thread_max, std::vector<double>(n_col * n_col / 4));
+    basis_prime_vals_half_set.assign(N_thread_max, std::vector<double>(n_col * n_col / 4));
     wA_set.assign(N_thread_max, std::vector<double>(d));
     wB_set.assign(N_thread_max, std::vector<double>(d));
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(N_thread_max > 1)
     for (uint i_thread = 0; i_thread < N_thread_max; i_thread++)
     {
         F_stacked_set[i_thread] = gsl_vector_alloc(d * n_col);
@@ -157,7 +185,7 @@ void pylevin::init_splines(std::vector<double> &x, const std::vector<std::vector
         spline_integrand.resize(integrand[0].size());
         acc_integrand.resize(integrand[0].size(), std::vector<gsl_interp_accel *>(N_thread_max));
         is_y_log.resize(n_integrand, false);
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
         for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
         {
             spline_integrand[i_integrand] = gsl_spline_alloc(gsl_interp_akima, x.size());
@@ -228,7 +256,7 @@ std::vector<std::vector<double>> pylevin::get_integrand(std::vector<double> x)
         {
             x_value = log(x_value);
         }
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
         for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
         {
             result[i_x][i_integrand] = gsl_spline_eval(spline_integrand[i_integrand], x_value, acc_integrand[i_integrand][0]);
@@ -608,45 +636,23 @@ void pylevin::fill_w_triple(double x, double k_1, double k_2, double k_3, uint e
 
 double pylevin::A_matrix_single(uint i, uint j, double x, double k, uint ell)
 {
-    if (type == 0)
+    if (type > 1)
     {
-        if (i == 0 && j == 0)
-        {
-            return static_cast<double>(ell) / x;
-        }
-        if (i * j == 1)
-        {
-            return -(ell + 2.0) / x;
-        }
-        if (i < j)
-        {
-            return -k;
-        }
-        else
-        {
-            return k;
-        }
+        return 0.0;
     }
-    if (type == 1)
+
+    if (i == j)
     {
-        if (i == 0 && j == 0)
+        const double inv_x = 1.0 / x;
+        if (i == 0)
         {
-            return static_cast<double>(ell) / x;
+            return static_cast<double>(ell) * inv_x;
         }
-        if (i * j == 1)
-        {
-            return -(ell + 1.0) / x;
-        }
-        if (i < j)
-        {
-            return -k;
-        }
-        else
-        {
-            return k;
-        }
+        const double offset = (type == 0) ? 2.0 : 1.0;
+        return -(static_cast<double>(ell) + offset) * inv_x;
     }
-    return 0.0;
+
+    return (i < j) ? -k : k;
 }
 
 double pylevin::A_matrix_double(uint i, uint j, double x, double k_1, double k_2, uint ell_1, uint ell_2)
@@ -1013,6 +1019,18 @@ void pylevin::setNodes_cheby(uint i)
     {
         x_j_set_half[i][j] = norm_half * cos((2. * (j + 1) - 1) / (n_col)*M_PI + M_PI);
     }
+    for (uint j = 0; j < n_col; j++)
+    {
+        fill_chebyshev_basis(x_j_set[i][j], n_col,
+                             basis_vals_set[i].data() + j * n_col,
+                             basis_prime_vals_set[i].data() + j * n_col);
+    }
+    for (uint j = 0; j < n_col / 2; j++)
+    {
+        fill_chebyshev_basis(x_j_set_half[i][j], n_col / 2,
+                             basis_vals_half_set[i].data() + j * (n_col / 2),
+                             basis_prime_vals_half_set[i].data() + j * (n_col / 2));
+    }
 }
 
 double pylevin::map_y_to_x(double y, double A, double B)
@@ -1058,19 +1076,15 @@ void pylevin::solve_LSE_single(double A, double B, uint col, uint i_integrand, d
     const double half_BA = (B - A) / 2.0;
     const std::vector<double> &x_j = (col == n_col) ? x_j_set[tid] : x_j_set_half[tid];
     gsl_vector *F_stacked = (col == n_col) ? F_stacked_set[tid] : F_stacked_set_half[tid];
-    std::vector<double> &basis_vals = basis_vals_set[tid];
-    std::vector<double> &basis_prime_vals = basis_prime_vals_set[tid];
+    const std::vector<double> &basis_vals = (col == n_col) ? basis_vals_set[tid] : basis_vals_half_set[tid];
+    const std::vector<double> &basis_prime_vals = (col == n_col) ? basis_prime_vals_set[tid] : basis_prime_vals_half_set[tid];
     std::vector<double> &A_mat = A_mat_set[tid];
     for (uint j = 0; j < col; j++)
     {
         double y = x_j[j];
         double x = map_y_to_x(y, A, B);
         gsl_vector_set(F_stacked, j, half_BA * inhomogeneity(x, i_integrand, tid));
-        for (uint m = 0; m < col; m++)
-        {
-            basis_vals[m] = basis_function_cheby(y, m);
-            basis_prime_vals[m] = basis_function_prime_cheby(y, m);
-        }
+        const uint basis_offset = j * col;
         for (uint i = 0; i < d; i++)
             for (uint q = 0; q < d; q++)
                 A_mat[q * d + i] = A_matrix_single(q, i, x, k, ell);
@@ -1080,9 +1094,9 @@ void pylevin::solve_LSE_single(double A, double B, uint col, uint i_integrand, d
                 double A_qi = half_BA * A_mat[q * d + i];
                 for (uint m = 0; m < col; m++)
                 {
-                    double LSE_coeff = A_qi * basis_vals[m];
+                    double LSE_coeff = A_qi * basis_vals[basis_offset + m];
                     if (q == i)
-                        LSE_coeff += basis_prime_vals[m];
+                        LSE_coeff += basis_prime_vals[basis_offset + m];
                     gsl_matrix_set(matrix_G, i * col + j, q * col + m, LSE_coeff);
                 }
             }
@@ -1121,19 +1135,15 @@ void pylevin::solve_LSE_double(double A, double B, uint col, uint i_integrand, d
     const double half_BA = (B - A) / 2.0;
     const std::vector<double> &x_j = (col == n_col) ? x_j_set[tid] : x_j_set_half[tid];
     gsl_vector *F_stacked = (col == n_col) ? F_stacked_set[tid] : F_stacked_set_half[tid];
-    std::vector<double> &basis_vals = basis_vals_set[tid];
-    std::vector<double> &basis_prime_vals = basis_prime_vals_set[tid];
+    const std::vector<double> &basis_vals = (col == n_col) ? basis_vals_set[tid] : basis_vals_half_set[tid];
+    const std::vector<double> &basis_prime_vals = (col == n_col) ? basis_prime_vals_set[tid] : basis_prime_vals_half_set[tid];
     std::vector<double> &A_mat = A_mat_set[tid];
     for (uint j = 0; j < col; j++)
     {
         double y = x_j[j];
         double x = map_y_to_x(y, A, B);
         gsl_vector_set(F_stacked, j, half_BA * inhomogeneity(x, i_integrand, tid));
-        for (uint m = 0; m < col; m++)
-        {
-            basis_vals[m] = basis_function_cheby(y, m);
-            basis_prime_vals[m] = basis_function_prime_cheby(y, m);
-        }
+        const uint basis_offset = j * col;
         for (uint i = 0; i < d; i++)
             for (uint q = 0; q < d; q++)
                 A_mat[q * d + i] = A_matrix_double(q, i, x, k_1, k_2, ell_1, ell_2);
@@ -1143,9 +1153,9 @@ void pylevin::solve_LSE_double(double A, double B, uint col, uint i_integrand, d
                 double A_qi = half_BA * A_mat[q * d + i];
                 for (uint m = 0; m < col; m++)
                 {
-                    double LSE_coeff = A_qi * basis_vals[m];
+                    double LSE_coeff = A_qi * basis_vals[basis_offset + m];
                     if (q == i)
-                        LSE_coeff += basis_prime_vals[m];
+                        LSE_coeff += basis_prime_vals[basis_offset + m];
                     gsl_matrix_set(matrix_G, i * col + j, q * col + m, LSE_coeff);
                 }
             }
@@ -1184,19 +1194,15 @@ void pylevin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, d
     const double half_BA = (B - A) / 2.0;
     const std::vector<double> &x_j = (col == n_col) ? x_j_set[tid] : x_j_set_half[tid];
     gsl_vector *F_stacked = (col == n_col) ? F_stacked_set[tid] : F_stacked_set_half[tid];
-    std::vector<double> &basis_vals = basis_vals_set[tid];
-    std::vector<double> &basis_prime_vals = basis_prime_vals_set[tid];
+    const std::vector<double> &basis_vals = (col == n_col) ? basis_vals_set[tid] : basis_vals_half_set[tid];
+    const std::vector<double> &basis_prime_vals = (col == n_col) ? basis_prime_vals_set[tid] : basis_prime_vals_half_set[tid];
     std::vector<double> &A_mat = A_mat_set[tid];
     for (uint j = 0; j < col; j++)
     {
         double y = x_j[j];
         double x = map_y_to_x(y, A, B);
         gsl_vector_set(F_stacked, j, half_BA * inhomogeneity(x, i_integrand, tid));
-        for (uint m = 0; m < col; m++)
-        {
-            basis_vals[m] = basis_function_cheby(y, m);
-            basis_prime_vals[m] = basis_function_prime_cheby(y, m);
-        }
+        const uint basis_offset = j * col;
         for (uint i = 0; i < d; i++)
             for (uint q = 0; q < d; q++)
                 A_mat[q * d + i] = A_matrix_triple(q, i, x, k_1, k_2, k_3, ell_1, ell_2, ell_3);
@@ -1206,9 +1212,9 @@ void pylevin::solve_LSE_triple(double A, double B, uint col, uint i_integrand, d
                 double A_qi = half_BA * A_mat[q * d + i];
                 for (uint m = 0; m < col; m++)
                 {
-                    double LSE_coeff = A_qi * basis_vals[m];
+                    double LSE_coeff = A_qi * basis_vals[basis_offset + m];
                     if (q == i)
-                        LSE_coeff += basis_prime_vals[m];
+                        LSE_coeff += basis_prime_vals[basis_offset + m];
                     gsl_matrix_set(matrix_G, i * col + j, q * col + m, LSE_coeff);
                 }
             }
@@ -1759,7 +1765,7 @@ void pylevin::allocate_variables_for_lse()
         LU_G_matrix.resize(n_integrand, std::vector<gsl_matrix *>());
         permutation.resize(n_integrand, std::vector<gsl_permutation *>());
         w_precomp.resize(n_integrand, std::vector<std::vector<double>>());
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
         for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
         {
             for (uint i_bisec = 0; i_bisec < bisection[i_integrand].size() - 1; i_bisec++)
@@ -1776,7 +1782,7 @@ void pylevin::allocate_variables_for_lse()
         LU_G_matrix.resize(n_integrand * size_variables, std::vector<gsl_matrix *>());
         permutation.resize(n_integrand * size_variables, std::vector<gsl_permutation *>());
         w_precomp.resize(n_integrand * size_variables, std::vector<std::vector<double>>());
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
         for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
         {
             for (uint i_variable = 0; i_variable < size_variables; i_variable++)
@@ -1815,7 +1821,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
     {
         if (size_variables < n_integrand)
         {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
@@ -1836,7 +1842,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
         {
             if (!is_diagonal)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
@@ -1855,7 +1861,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
@@ -1885,7 +1891,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             }
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -1900,7 +1906,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             {
                 if (is_diagonal)
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -1910,7 +1916,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -1929,7 +1935,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             allocate_variables_for_lse();
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -1950,7 +1956,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
             {
                 if (is_diagonal)
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -1966,7 +1972,7 @@ void pylevin::levin_integrate_bessel_single(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2011,7 +2017,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
     {
         if (size_variables < n_integrand)
         {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
@@ -2032,7 +2038,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
         {
             if (!is_diagonal)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2051,7 +2057,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
@@ -2081,7 +2087,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             }
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2096,7 +2102,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             {
                 if (is_diagonal)
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2106,7 +2112,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2125,7 +2131,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             allocate_variables_for_lse();
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2146,7 +2152,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
             {
                 if (is_diagonal)
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2162,7 +2168,7 @@ void pylevin::levin_integrate_bessel_double(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2207,7 +2213,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
     {
         if (size_variables < n_integrand)
         {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
             for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
             {
                 uint tid = omp_get_thread_num();
@@ -2228,7 +2234,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
         {
             if (!is_diagonal)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2247,7 +2253,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             }
             else
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                 for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                 {
                     result.mutable_at(i_variable) = 0.;
@@ -2277,7 +2283,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             }
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2301,7 +2307,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2320,7 +2326,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             allocate_variables_for_lse();
             if (size_variables < n_integrand)
             {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(n_integrand >= N_thread_max)
                 for (uint i_integrand = 0; i_integrand < n_integrand; i_integrand++)
                 {
                     uint tid = omp_get_thread_num();
@@ -2340,7 +2346,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
             {
                 if (is_diagonal)
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();
@@ -2356,7 +2362,7 @@ void pylevin::levin_integrate_bessel_triple(std::vector<double> x_min, std::vect
                 }
                 else
                 {
-#pragma omp parallel for num_threads(N_thread_max) schedule(auto)
+#pragma omp parallel for num_threads(N_thread_max) schedule(auto) if(size_variables >= N_thread_max)
                     for (uint i_variable = 0; i_variable < size_variables; i_variable++)
                     {
                         uint tid = omp_get_thread_num();

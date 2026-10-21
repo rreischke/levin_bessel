@@ -34,4 +34,11 @@ def test_levin_integrate_bessel_single():
     lp_single.update_integrand(x,f_of_x, logx, logy)
     lp_single.levin_integrate_bessel_single(x[0]*np.ones_like(k), x[-1]*np.ones_like(k), k, ell, result_levin)
 
-test_levin_integrate_bessel_single()
+
+import time as time
+
+t0 = time.time()
+for i in range(100):
+    test_levin_integrate_bessel_single()
+t1 = time.time()
+print(f"Time taken for 100 runs: {t1-t0:.4f}    seconds")

@@ -12,14 +12,18 @@ __version__ = "1.1.0"
 if (sys.platform[:6] == "darwin"
         and (distutils.sysconfig.get_config_var("CC") == "clang"
                 or os.environ.get("CC", "") == "clang")):
-    compiler_args = ["-Xpreprocessor"]
-    linker_args = ["-mlinker-version=305", "-Xpreprocessor"]
+    # Apple Clang accepts OpenMP through the preprocessor driver flag, but
+    # does not automatically link the OpenMP runtime.
+    compiler_args = ["-Xpreprocessor", "-fopenmp"]
+    linker_args = ["-lomp"]
 else:
     compiler_args = []
     linker_args = []
 
-compiler_args += ["-fopenmp","-O3", "-ffast-math", "-fassociative-math", "-pedantic"]
-linker_args += ["-fopenmp"]
+compiler_args += ["-O3", "-ffast-math", "-fassociative-math", "-pedantic"]
+if sys.platform[:6] != "darwin":
+    compiler_args += ["-fopenmp"]
+    linker_args += ["-fopenmp"]
 
 ext_modules = [
     Pybind11Extension(

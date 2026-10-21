@@ -55,5 +55,6 @@
         "algorithm": "cpp"
     },
     "cSpell.useLocallyInstalledCSpellDictionaries": false,
-    "cSpell.mergeCSpellSettings": false
+    "cSpell.mergeCSpellSettings": false,
+    "r.lsp.promptToInstall": false
 }

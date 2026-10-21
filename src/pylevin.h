@@ -38,8 +38,8 @@ private:
   std::vector<std::vector<double>> x_j_set, x_j_set_half;
   // per-thread scratch buffers (avoid heap allocation in hot paths)
   std::vector<std::vector<double>> A_mat_set;            // d*d per thread
-  std::vector<std::vector<double>> basis_vals_set;       // n_col per thread
-  std::vector<std::vector<double>> basis_prime_vals_set; // n_col per thread
+  std::vector<std::vector<double>> basis_vals_set, basis_vals_half_set;             // cached collocation bases per thread
+  std::vector<std::vector<double>> basis_prime_vals_set, basis_prime_vals_half_set; // cached collocation derivatives per thread
   std::vector<std::vector<double>> wA_set, wB_set;       // d per thread
 
   bool is_diagonal = false;
