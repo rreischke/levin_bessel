@@ -6,7 +6,7 @@ from pybind11.setup_helpers import Pybind11Extension
 
 import distutils.sysconfig
 
-__version__ = "1.1.0"
+__version__ = "2.0.0"
 
 
 if (sys.platform[:6] == "darwin"
