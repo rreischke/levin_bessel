@@ -4,8 +4,6 @@ This library implements Levin's method for integrals containing products of up t
 - Integrals over products of up to three spherical or cylindrical Bessel functions, for many integrands and arguments at once.
 - [Fast repeated integrals](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#repeated-integrals), as needed in inference: after the first two calls, every integral is a stored quadrature rule, and updating the integrand and integrating again takes a fraction of a millisecond for thousands of integrals.
 - [Differentiable integrals with ``jax``](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#exporting-the-quadrature-rules): the stored quadrature rules can be exported and evaluated in ``jax``, jit-compiled, differentiable and on a GPU, with the integrand evaluated directly at the nodes.
-- [One instance for many Bessel orders](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#diagonal-mode-and-shared-integrands) that share the same integrands, for example all multipoles of a power spectrum.
-- [Accurate by default](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#accuracy-and-solvers): cubic-spline interpolation of the integrands, safeguards against false convergence, and a banded solver for many collocation points.
 
 See the [release notes](https://github.com/rreischke/levin_bessel/releases) for what changed in each version.
 
