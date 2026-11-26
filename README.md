@@ -1,5 +1,14 @@
 This library implements Levin's method for integrals containing products of up to three spherical or cylindrical Bessel functions.
 
+## Features
+- Integrals over products of up to three spherical or cylindrical Bessel functions, for many integrands and arguments at once.
+- [Fast repeated integrals](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#repeated-integrals), as needed in inference: after the first two calls, every integral is a stored quadrature rule, and updating the integrand and integrating again takes a fraction of a millisecond for thousands of integrals.
+- [Differentiable integrals with ``jax``](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#exporting-the-quadrature-rules): the stored quadrature rules can be exported and evaluated in ``jax``, jit-compiled, differentiable and on a GPU, with the integrand evaluated directly at the nodes.
+- [One instance for many Bessel orders](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#diagonal-mode-and-shared-integrands) that share the same integrands, for example all multipoles of a power spectrum.
+- [Accurate by default](https://levin-bessel.readthedocs.io/en/latest/guides/running.html#accuracy-and-solvers): cubic-spline interpolation of the integrands, safeguards against false convergence, and a banded solver for many collocation points.
+
+See the [release notes](https://github.com/rreischke/levin_bessel/releases) for what changed in each version.
+
 ## Installation
 The installation has been tested on linux-based systems as well as Mac OS. For windows users, one would need to modify the ``setupy.py`` file accordingly. 
 ### With pip
@@ -36,7 +45,13 @@ If this is the case just install it by typing
 ```shell
  conda install -c conda-forge gxx_linux-64
 ```
-and redo the ``pip`` installation. 
+and redo the ``pip`` installation.
+
+On Mac OS, the code is compiled with Apple clang and OpenMP (``libomp``). Recent versions of Apple clang need an OpenMP runtime of version 19 or newer; otherwise importing ``pylevin`` fails with ``symbol not found ... __kmpc_dispatch_deinit``. In this case update it and reinstall:
+```shell
+conda install -c conda-forge "llvm-openmp>=19"
+```
+When reinstalling, remove the ``build`` directory first, as ``pip`` otherwise reuses an extension built before, possibly for another environment. 
 
 ### Testing the installation
 You can run ``pytest`` to test the installation.
@@ -48,7 +63,7 @@ Feel free to watch my recording for Cosmology from Home 2025 on YouTube for a br
 
 
 ## Tutorial: How to use the library
-There is a detailed documentation of the code on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/). For a tutorial, there is a detailed [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory
+The [usage guide](https://levin-bessel.readthedocs.io/en/latest/guides/running.html) on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/) is the best place to start, and the documentation there describes all methods. The [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory contains the full examples, with comparisons to other methods and plots.
 
 ## Contributing
 If you want other types of oscillatory integrals implemented in ``pylevin``, I am very happy to help navigating the code. Note that these integrals need to satisfy some kind recursion relation for their derivatives (Eq. 9 in the arxiv version of the paper). This relation can technically be numerical but requires very stable derivatives.
@@ -58,5 +73,6 @@ If you encounter any issue or need help with the code you can either open an iss
 
 
 ## Citing pylevin
-If you use this code please cite the implementation described in [2502.12142](https://arxiv.org/abs/2502.12142). You can find references to the original method therein.
+If you use this code please cite the implementation described in [2502.12142](https://joss.theoj.org/papers/10.21105/joss.08618)
+You can find references to the original method therein.
 
