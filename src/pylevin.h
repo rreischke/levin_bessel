@@ -161,6 +161,7 @@ private:
   bool solve_LSE_single_banded(double A, double B, uint col, uint i_integrand, double k, uint ell);
   uint precomp_index(uint i_integrand, uint tid) const;
   bool is_non_oscillatory(double A, double B, double k_sum) const;
+  bool integrand_resolved(double A, double B, uint i_integrand);
   double smooth_integral(double A, double B, uint col, uint i_integrand, const std::function<double(double)> &w0, bool store);
   void store_levin_weights(double A, double B, uint i_integrand, const double *wA, const double *wB);
   void factor_spline_grid();

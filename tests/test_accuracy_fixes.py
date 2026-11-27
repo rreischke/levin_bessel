@@ -1,8 +1,10 @@
-"""Tests for the ratio cap (max_ratio) and the non-oscillatory quadrature (non_oscillatory)."""
+"""Tests for the ratio cap (max_ratio), the non-oscillatory quadrature (non_oscillatory) and the
+resolution check of the integrand on every subinterval."""
 
 import numpy as np
 import pylevin as levin
 import pytest
+from scipy.special import spherical_jn
 
 
 def integrate_single(bessel_type, x, f, k, ell, rel_acc, calls=1, **options):
@@ -64,3 +66,28 @@ def test_repeat_calls_consistent():
     scale = np.abs(first).max()
     assert np.max(np.abs(second - first)) < 1e-12 * scale
     assert np.max(np.abs(third - first)) < 1e-7 * scale
+
+
+@pytest.mark.parametrize("amplitude", [0.05, 0.2])
+def test_unresolved_wiggles_are_refined(amplitude):
+    """xi_0(s) for a power spectrum with BAO-like wiggles, sampled on 1024 wavenumbers.
+
+    The pieces from the ratio cap are wide in k. With 16 collocation points on such a
+    piece, I_16 and I_8 agreed while both missed the wiggles, so the bisection stopped
+    with errors of 2e-3 (amplitude 0.05) to 7e-3 (amplitude 0.2). Pieces on which the
+    Chebyshev coefficients of the integrand have not decayed are now refined.
+    """
+    k = np.logspace(-4, 1, 2**10)
+    s = np.linspace(2e-1, 3e2, 80)
+    fit = (s > 20) & (s < 250)
+    def spectrum(k):
+        smooth = k**0.96 / (1 + (k / 0.015)**2)**1.5 / (1 + (k / 2)**2)
+        return smooth * (1 + amplitude * np.sin(150 * k) * np.exp(-(k / 0.2)**2))
+    k_dense = np.geomspace(k[0], k[-1], 200001)
+    direct = np.array([np.trapezoid(k_dense**2 * spectrum(k_dense) * spherical_jn(0, k_dense * s_i), k_dense) for s_i in s])
+    lp = levin.pylevin(0, k, (k**2 * spectrum(k))[:, None], True, False, 1)
+    lp.set_levin(16, 32, 1e-4, True, False)
+    result = np.zeros((len(s), 1))
+    lp.levin_integrate_bessel_single(np.full(len(s), k[0]), np.full(len(s), k[-1]), s, np.zeros(len(s), int), result)
+    error = np.abs(s**2 * (result[:, 0] - direct))[fit]
+    assert np.max(error) < 3e-4 * np.max(np.abs(s**2 * direct)[fit])

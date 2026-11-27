@@ -2341,6 +2341,25 @@ uint pylevin::precomp_index(uint i_integrand, uint tid) const
     return is_diagonal ? index_variable[tid] : i_integrand * size_variables + index_variable[tid];
 }
 
+bool pylevin::integrand_resolved(double A, double B, uint i_integrand)
+{
+    // The integrand is resolved on [A, B] if the last two Chebyshev coefficients of its
+    // interpolant on n_col Lobatto points are below tol_rel times the largest one.
+    const uint tid = omp_get_thread_num();
+    std::vector<double> values(n_col), coefficients;
+    for (uint j = 0; j < n_col; j++)
+    {
+        values[j] = inhomogeneity(map_y_to_x(std::cos(M_PI * j / (n_col - 1)), A, B), i_integrand, tid);
+    }
+    chebyshev_coefficients_from_lobatto_values(values, coefficients, dct_fft_size, dct_chirp, dct_kernel_fft);
+    double largest = 0.0;
+    for (double coefficient : coefficients)
+    {
+        largest = std::max(largest, std::abs(coefficient));
+    }
+    return std::abs(coefficients[n_col - 1]) + std::abs(coefficients[n_col - 2]) <= tol_rel * largest;
+}
+
 bool pylevin::is_non_oscillatory(double A, double B, double k_sum) const
 {
     return non_oscillatory > 0.0 && k_sum * (B - A) < non_oscillatory;
@@ -2632,9 +2651,17 @@ double pylevin::iterate_pieces(double A, double B, uint col, uint i_integrand, u
         const double floor = std::max(left, x_turn);
         return max_ratio > 1.0 && floor > 0.0 && right / max_ratio > floor;
     };
+    // A piece on which the integrand itself is not resolved counts as unconverged, even if
+    // I_col and I_col/2 agree: both can miss small features such as the BAO wiggles of a
+    // power spectrum.
     auto error_estimate = [&](double left, double right, double I_full, double I_half)
     {
-        return too_wide(left, right) ? forced_split_error : pow(I_full - I_half, 2);
+        if (too_wide(left, right))
+        {
+            return forced_split_error;
+        }
+        const double estimate = pow(I_full - I_half, 2);
+        return integrand_resolved(left, right, i_integrand) ? estimate : std::max(estimate, I_full * I_full);
     };
     std::vector<double> x_sub{A};
     if (too_wide(A, B))

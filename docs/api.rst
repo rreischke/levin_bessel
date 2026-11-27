@@ -55,7 +55,7 @@ Sets up the internal parameters of the Levin integrator. If not called, default 
 
 * ``maximum_number_bisections_in`` (``integer``): Maximum number of bisections used for the adaptive integration. **default: 32**
 
-* ``relative_accuracy_in`` (``float``): Relative target accuracy at which the adaptive integration (the bisection) is stopped. **default: 1e-4**
+* ``relative_accuracy_in`` (``float``): Relative target accuracy at which the adaptive integration (the bisection) is stopped. A subinterval also counts as unconverged as long as the integrand is not resolved there, i.e. the last Chebyshev coefficients of its interpolant on the collocation points exceed ``relative_accuracy_in`` times the largest one. Like any adaptive error estimate, this can occasionally stop early for a single integral, so choose it somewhat below the accuracy you need. **default: 1e-4**
 
 * ``super_accurate`` (``True`` / ``False``): Should ``gsl`` (``False``)  or ``boost`` (``True``) be used for the computation of the Bessel functions. Especially at higher orders (larger than 100) of the Bessel functions ``gsl``can fail. **default: False**
 

@@ -6,7 +6,11 @@ Levin
 ===================================
 
 The levin code is a python package to calculate integrals over products
-of up to three spherical and cylindrical Bessel functions
+of up to three spherical and cylindrical Bessel functions.
+
+Start with the :doc:`guides/running` guide. The `tutorial notebooks <https://github.com/rreischke/levin_bessel/tree/main/tutorial>`_
+contain the full examples, including repeated integrals across cosmologies and evaluating the integrals with ``jax`` on a GPU
+(`open in Colab <https://colab.research.google.com/github/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb>`_).
 
 
 Contents

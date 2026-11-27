@@ -60,8 +60,12 @@ Feel free to watch my recording for Cosmology from Home 2025 on YouTube for a br
 [![my recording for Cosmology from Home 2025 on youtube](./docs/levin_talk.png)](https://www.youtube.com/watch?v=RcZVc6emnQU&t=2s)
 
 
-## Tutorial: How to use the library
-The [usage guide](https://levin-bessel.readthedocs.io/en/latest/guides/running.html) on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/) is the best place to start, and the documentation there describes all methods. The [python notebook](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb) in the ``tutorial`` directory contains the full examples, with comparisons to other methods and plots.
+## Tutorials
+The [usage guide](https://levin-bessel.readthedocs.io/en/latest/guides/running.html) on [levin-bessel.readthedocs.io](https://levin-bessel.readthedocs.io/en/latest/) is the best place to start, and the documentation there describes all methods. The notebooks in the ``tutorial`` directory contain the full examples:
+
+- [``levin_tutorial.ipynb``](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb): integrals over one, two and three Bessel functions compared with quadrature, updating the integrand, diagonal mode and shared integrands, exporting the quadrature rules to ``numpy`` and ``jax``, and integrating many integrand sets at once.
+- [``levin_cosmology_tutorial.ipynb``](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_cosmology_tutorial.ipynb): repeated integrals across cosmologies. For the correlation function multipoles, ``update_integrand``, the exported rules and the batched matrix product are compared with new instances, ``hankl`` and the direct integral.
+- [``levin_colab_gpu.ipynb``](https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb): ``jax`` on a GPU, with the comparisons to ``hankl`` and ``CCL`` from the paper, and the angular power spectra of many narrow top-hat shells (as needed by GLASS) across cosmologies.
 
 ## Contributing
 If you want other types of oscillatory integrals implemented in ``pylevin``, I am very happy to help navigating the code. Note that these integrals need to satisfy some kind recursion relation for their derivatives (Eq. 9 in the arxiv version of the paper). This relation can technically be numerical but requires very stable derivatives.

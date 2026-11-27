@@ -1,7 +1,11 @@
 Running the code
 ================
 
-This page summarises how to use ``levin``. The `tutorial notebook <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb>`_ contains the full examples, with comparisons to other methods and plots. All methods are described in the :doc:`../api`.
+This page summarises how to use ``levin``; all methods are described in the :doc:`../api`. The notebooks in the ``tutorial`` directory contain the full examples, with comparisons to other methods and plots:
+
+* `levin_tutorial.ipynb <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_tutorial.ipynb>`_: integrals over one, two and three Bessel functions, updating the integrand, diagonal mode and shared integrands, exporting the quadrature rules, and integrating many integrand sets at once.
+* `levin_cosmology_tutorial.ipynb <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_cosmology_tutorial.ipynb>`_: repeated integrals across cosmologies, compared with new instances, ``hankl`` and the direct integral.
+* `levin_colab_gpu.ipynb <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb>`_ (`open in Colab <https://colab.research.google.com/github/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb>`_): ``jax`` on a GPU, the comparisons to ``hankl`` and ``CCL`` from the paper, and the angular power spectra of many narrow top-hat shells across cosmologies.
 
 
 A first integral
@@ -57,6 +61,8 @@ New integrands are passed with ``update_integrand``. The integration boundaries,
     for amplitude in np.linspace(0.5, 1.5, 100):
         lp.update_integrand(x, amplitude*f, True, True)
         lp.levin_integrate_bessel_single(x_min, x_max, k, ell, result)
+
+The `cosmology tutorial <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_cosmology_tutorial.ipynb>`_ shows that this is accurate for correlation function multipoles across a range of cosmologies: the updated instance agrees with the direct integral as well as a new instance does, at a hundredth of the cost.
 
 Repeated calls are fastest with ``logy = False`` and an unchanged ``x``: the integrals are then weighted sums of the new samples, without computing the spline. ``update_integrand`` also accepts a new ``x``, of any length. ``set_levin`` discards the stored integrals.
 
@@ -114,7 +120,7 @@ For integrands given as samples on ``x`` with ``logy = False``, the spline is li
     f_new = ...                                                          # new samples on x, shape (len(x), len(k))
     result_new = (W @ f_new.T[:, :, None])[:, :, 0].T                    # shape (len(ells), len(k)), no update_integrand needed
 
-For a single integrand set this is about as fast as ``update_integrand`` and a repeated call, since ``levin`` applies the same weights to the samples itself. It pays off for many integrand sets at once, for example in a sampler: with ``f_sets`` of shape ``(len(k), len(x), n_sets)``, ``W @ f_sets`` is one batched matrix product. The nodes must lie inside ``x`` (``levin`` sets the integrands to zero outside, the scipy spline extrapolates). The tutorial shows the full example.
+For a single integrand set this is about as fast as ``update_integrand`` and a repeated call, since ``levin`` applies the same weights to the samples itself. It pays off for many integrand sets at once, for example in a sampler: with ``f_sets`` of shape ``(len(k), len(x), n_sets)``, ``W @ f_sets`` is one batched matrix product. The nodes must lie inside ``x`` (``levin`` sets the integrands to zero outside, the scipy spline extrapolates). The tutorial and the `cosmology tutorial <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_cosmology_tutorial.ipynb>`_ show full examples, and the `GPU notebook <https://github.com/rreischke/levin_bessel/blob/main/tutorial/levin_colab_gpu.ipynb>`_ runs them with ``jax`` on a GPU.
 
 
 Accuracy and solvers
@@ -122,7 +128,7 @@ Accuracy and solvers
 
 ``set_levin(n_col, maximum_bisections, relative_accuracy, super_accurate, verbose, tol_abs = 0.0, banded = True, max_ratio = 5.0, non_oscillatory = 0.5)`` controls the integration:
 
-* ``n_col`` collocation points per subinterval, ``maximum_bisections`` and the relative (``relative_accuracy``) and absolute (``tol_abs``) target accuracy set the adaptive bisection.
+* ``n_col`` collocation points per subinterval, ``maximum_bisections`` and the relative (``relative_accuracy``) and absolute (``tol_abs``) target accuracy set the adaptive bisection. Subintervals are also refined until the integrand is resolved on them, so that features such as the BAO wiggles of a power spectrum are not missed. As for any adaptive error estimate, choose the accuracy somewhat below the one you need.
 * ``super_accurate = True`` uses ``boost`` instead of ``gsl`` for the Bessel functions, which is needed at high orders.
 * ``banded`` selects a banded Chebyshev solver for single Bessel functions with at least 64 collocation points. Repeated calls use the stored quadrature rules with either solver.
 * ``max_ratio`` and ``non_oscillatory`` guard against wrong results on subintervals spanning many decades in ``x`` and on subintervals where the Bessel functions barely oscillate; ``0`` disables them.
